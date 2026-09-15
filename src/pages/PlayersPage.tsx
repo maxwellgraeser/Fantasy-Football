@@ -5,194 +5,63 @@ import {
   getSortedRowModel,
   getFilteredRowModel,
   flexRender,
-  type ColumnDef,
   type SortingState,
 } from '@tanstack/react-table'
 import { useNavigate } from 'react-router-dom'
 import { useValueScores } from '@/hooks/useValueScores'
-import { ValueScoreBadge } from '@/components/ValueScoreBadge'
-import { TeamGradeChip } from '@/components/TeamGradeChip'
-import { TrendSparkline } from '@/components/TrendSparkline'
+import { usePlayerColumns, DEFAULT_FILTER_POSITIONS } from '@/components/playerColumns'
 import { PositionFilter } from '@/components/PositionFilter'
-import { positionBadgeClass } from '@/lib/positions'
+import { SeasonToggle } from '@/components/SeasonToggle'
+import { ScoringFormatToggle } from '@/components/ScoringFormatToggle'
 import { WeightsDrawer } from '@/components/WeightsDrawer'
 import { useWatchlistStore } from '@/store/watchlist'
+import { useWeightsStore } from '@/store/weights'
+import { isDefaultWeights } from '@/lib/scoring/presets'
 import type { PlayerRow } from '@/types/scoring'
 import type { FantasyPosition } from '@/types/sleeper'
 
 export function PlayersPage() {
-  const { rows, isLoading, error } = useValueScores()
+  const { rows, isLoading, error, season, gamesInSelectedSeason, scoringFormat, isRecomputing } = useValueScores()
   const navigate = useNavigate()
   const { toggle, has } = useWatchlistStore()
+  const { weights, reset: resetWeights } = useWeightsStore()
 
   const [positions, setPositions] = useState<FantasyPosition[]>([])
   const [includeRookies, setIncludeRookies] = useState(false)
   const [weightsOpen, setWeightsOpen] = useState(false)
   const [sorting, setSorting] = useState<SortingState>([{ id: 'valueScore', desc: true }])
-  const [globalFilter, setGlobalFilter] = useState('')
+  const [nameFilter, setNameFilter] = useState('')
   const [visibleCount, setVisibleCount] = useState(25)
   const sentinelRef = useRef<HTMLDivElement>(null)
 
+  const isCustomWeights = !isDefaultWeights(weights)
+
   const filtered = useMemo(() => {
     let r = rows
-    // years_exp=1 = first-year NFL players (2025 class). Exclude by default to keep "proven" focus.
+    // Hide players with no NFL games in the loaded seasons unless rookies are included
     if (!includeRookies) r = r.filter((p) => p.ppgHistory.some((h) => h.gp > 0) || p.position === 'DEF')
-    if (positions.length > 0) r = r.filter((p) => positions.includes(p.position))
+    const effectivePositions = positions.length > 0 ? positions : DEFAULT_FILTER_POSITIONS
+    r = r.filter((p) => effectivePositions.includes(p.position))
     return r
   }, [rows, includeRookies, positions])
 
-  const columns = useMemo<ColumnDef<PlayerRow>[]>(
-    () => [
-      {
-        id: 'rank',
-        header: '#',
-        cell: ({ row }) => (
-          <span className="text-slate-500 text-xs tabular-nums">{row.index + 1}</span>
-        ),
-        enableSorting: false,
-        size: 40,
-      },
-      {
-        id: 'valueScore',
-        header: 'Value',
-        accessorFn: (r) => r.scores.valueScore,
-        cell: ({ getValue }) => <ValueScoreBadge score={getValue<number>()} />,
-        size: 72,
-      },
-      {
-        id: 'name',
-        header: 'Player',
-        accessorFn: (r) => r.fullName,
-        cell: ({ row }) => {
-          const p = row.original
-          const watched = has(p.playerId)
-          return (
-            <div className="flex items-center gap-2 min-w-0">
-              <button
-                onClick={(e) => { e.stopPropagation(); toggle(p.playerId) }}
-                className={`shrink-0 text-xs transition-colors ${watched ? 'text-yellow-400' : 'text-slate-700 hover:text-slate-500'}`}
-                title={watched ? 'Remove from watchlist' : 'Add to watchlist'}
-              >
-                {watched ? '★' : '☆'}
-              </button>
-              <span className="text-slate-200 text-sm font-medium truncate">{p.fullName}</span>
-            </div>
-          )
-        },
-        size: 180,
-      },
-      {
-        id: 'position',
-        header: 'Pos',
-        accessorFn: (r) => r.position,
-        cell: ({ getValue }) => {
-          const pos = getValue<string>()
-          return (
-            <span className={`text-xs font-semibold px-1.5 py-0.5 rounded ${positionBadgeClass(pos)}`}>
-              {pos}
-            </span>
-          )
-        },
-        size: 56,
-      },
-      {
-        id: 'team',
-        header: 'Team',
-        accessorFn: (r) => r.team ?? '',
-        cell: ({ row }) => (
-          <TeamGradeChip
-            team={row.original.team}
-            grade={row.original.scores.teamGrade}
-            showGrade
-          />
-        ),
-        size: 90,
-      },
-      {
-        id: 'age',
-        header: 'Age',
-        accessorFn: (r) => r.age,
-        cell: ({ getValue }) => (
-          <span className="text-slate-400 text-xs tabular-nums">{getValue<number | null>() ?? '—'}</span>
-        ),
-        size: 52,
-      },
-      {
-        id: 'exp',
-        header: 'Exp',
-        accessorFn: (r) => r.yearsExp,
-        cell: ({ getValue }) => (
-          <span className="text-slate-400 text-xs tabular-nums">{getValue<number>()}yr</span>
-        ),
-        size: 52,
-      },
-      {
-        id: 'playerGrade',
-        header: 'Player',
-        accessorFn: (r) => r.scores.playerGrade,
-        cell: ({ getValue }) => (
-          <span className="text-slate-300 text-xs tabular-nums font-medium">{getValue<number>()}</span>
-        ),
-        size: 60,
-      },
-      {
-        id: 'oppGrade',
-        header: 'Opp',
-        accessorFn: (r) => r.scores.opportunityGrade,
-        cell: ({ getValue }) => (
-          <span className="text-slate-300 text-xs tabular-nums font-medium">{getValue<number>()}</span>
-        ),
-        size: 60,
-      },
-      {
-        id: 'teamGrade',
-        header: 'Team',
-        accessorFn: (r) => r.scores.teamGrade,
-        cell: ({ getValue }) => (
-          <span className="text-slate-300 text-xs tabular-nums font-medium">{getValue<number>()}</span>
-        ),
-        size: 60,
-      },
-      {
-        id: 'ppg',
-        header: 'PPG',
-        accessorFn: (r) => r.seasonPpg ?? 0,
-        cell: ({ getValue }) => (
-          <span className="text-slate-300 text-xs tabular-nums">{getValue<number>().toFixed(1)}</span>
-        ),
-        size: 60,
-      },
-      {
-        id: 'trend',
-        header: 'Trend',
-        accessorFn: (r) => r.sparkline,
-        cell: ({ row }) => <TrendSparkline data={row.original.sparkline.map((h) => h.ppg)} />,
-        enableSorting: false,
-        size: 90,
-      },
-      {
-        id: 'injury',
-        header: '',
-        accessorFn: (r) => r.injuryStatus,
-        cell: ({ getValue }) => {
-          const s = getValue<string | null>()
-          if (!s) return null
-          const color = s === 'Out' || s === 'IR' ? 'text-red-400' : 'text-yellow-400'
-          return <span className={`text-xs ${color}`}>{s === 'Questionable' ? 'Q' : s}</span>
-        },
-        enableSorting: false,
-        size: 32,
-      },
-    ],
-    [has, toggle],
-  )
+  const columns = usePlayerColumns({
+    has,
+    toggle,
+    weights,
+    selectedSeason: season.selectedSeason,
+    scoringFormat,
+    isInProgress: season.isInProgress,
+  })
 
   const table = useReactTable({
     data: filtered,
     columns,
-    state: { sorting, globalFilter },
+    state: { sorting, globalFilter: nameFilter },
     onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter,
+    onGlobalFilterChange: setNameFilter,
+    globalFilterFn: (row, _columnId, value: string) =>
+      row.original.fullName.toLowerCase().includes(value.toLowerCase()),
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -218,7 +87,7 @@ export function PlayersPage() {
 
   useEffect(() => {
     setVisibleCount(25)
-  }, [positions, includeRookies, globalFilter, sorting])
+  }, [positions, includeRookies, nameFilter, sorting])
 
   const handleRowClick = useCallback((row: PlayerRow) => {
     navigate(`/player/${row.playerId}`)
@@ -237,12 +106,14 @@ export function PlayersPage() {
       <WeightsDrawer open={weightsOpen} onClose={() => setWeightsOpen(false)} />
 
       {/* Header */}
-      <div className="flex flex-wrap items-center gap-3 mb-5">
+      <div className="flex flex-wrap items-center gap-3 mb-2">
         <h1 className="text-lg font-bold text-white mr-2">Players</h1>
 
+        <SeasonToggle season={season} gamesInSelectedSeason={gamesInSelectedSeason} />
+        <ScoringFormatToggle />
         <PositionFilter selected={positions} onChange={setPositions} />
 
-        <label className="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer ml-1">
+        <label className="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer">
           <input
             type="checkbox"
             checked={includeRookies}
@@ -252,9 +123,33 @@ export function PlayersPage() {
           Include rookies
         </label>
 
+        <input
+          type="text"
+          value={nameFilter}
+          onChange={(e) => setNameFilter(e.target.value)}
+          placeholder="Filter by name…"
+          className="px-2.5 py-1 text-xs bg-slate-900 border border-slate-700 rounded-lg text-slate-200
+            placeholder:text-slate-600 focus:outline-none focus:border-violet-500 w-36"
+        />
+
         <div className="flex-1" />
 
+        {isRecomputing && (
+          <span className="text-xs text-slate-500 animate-pulse">Updating…</span>
+        )}
+
         <span className="text-xs text-slate-500 tabular-nums">{filtered.length} players</span>
+
+        {isCustomWeights && (
+          <button
+            onClick={resetWeights}
+            title="Reset to default weights"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-violet-300 bg-violet-950/40
+              border border-violet-800/50 rounded-full hover:bg-violet-900/40 transition-colors"
+          >
+            Custom weights · Reset
+          </button>
+        )}
 
         <button
           onClick={() => setWeightsOpen(true)}
@@ -267,55 +162,68 @@ export function PlayersPage() {
 
       {/* Table */}
       {isLoading ? (
-        <div className="space-y-2">
+        <div className="space-y-2 mt-3">
           {Array.from({ length: 20 }).map((_, i) => (
             <div key={i} className="h-10 bg-slate-800/40 rounded animate-pulse" />
           ))}
         </div>
       ) : (
         <>
-        <div className="overflow-x-auto rounded-lg border border-slate-800">
+        <div className="overflow-x-auto rounded-lg border border-slate-800 mt-3">
           <table className="w-full text-left border-collapse">
             <thead>
               {table.getHeaderGroups().map((hg) => (
                 <tr key={hg.id} className="border-b border-slate-800 bg-slate-900/60">
-                  {hg.headers.map((header) => (
-                    <th
-                      key={header.id}
-                      style={{ width: header.getSize() }}
-                      className="px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wider select-none"
-                    >
-                      {header.isPlaceholder ? null : (
-                        <div
-                          className={header.column.getCanSort() ? 'cursor-pointer hover:text-slate-300 flex items-center gap-1' : ''}
-                          onClick={header.column.getToggleSortingHandler()}
-                        >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {header.column.getIsSorted() === 'asc' && ' ↑'}
-                          {header.column.getIsSorted() === 'desc' && ' ↓'}
-                        </div>
-                      )}
-                    </th>
-                  ))}
+                  {hg.headers.map((header) => {
+                    const sticky = header.column.id === 'name'
+                    return (
+                      <th
+                        key={header.id}
+                        colSpan={header.colSpan}
+                        style={{ width: header.getSize() }}
+                        className={`px-3 py-2.5 text-xs font-semibold text-slate-500 uppercase tracking-wider select-none
+                          ${header.colSpan > 1 ? 'text-center' : ''}
+                          ${sticky ? 'sticky left-0 z-20 bg-slate-900' : ''}`}
+                      >
+                        {header.isPlaceholder ? null : (
+                          <div
+                            className={`flex items-center gap-1 ${header.colSpan > 1 ? 'justify-center' : ''} ${header.column.getCanSort() ? 'cursor-pointer hover:text-slate-300' : ''}`}
+                            onClick={header.column.getToggleSortingHandler()}
+                          >
+                            {flexRender(header.column.columnDef.header, header.getContext())}
+                            {header.column.getIsSorted() === 'asc' && ' ↑'}
+                            {header.column.getIsSorted() === 'desc' && ' ↓'}
+                          </div>
+                        )}
+                      </th>
+                    )
+                  })}
                 </tr>
               ))}
             </thead>
             <tbody>
-              {visibleRows.map((row) => (
+              {visibleRows.map((row, i) => (
                 <tr
                   key={row.id}
                   onClick={() => handleRowClick(row.original)}
                   className="border-b border-slate-800/50 hover:bg-slate-800/30 cursor-pointer transition-colors"
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <td
-                      key={cell.id}
-                      style={{ width: cell.column.getSize() }}
-                      className="px-3 py-2"
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
+                  {row.getVisibleCells().map((cell) => {
+                    const sticky = cell.column.id === 'name'
+                    return (
+                      <td
+                        key={cell.id}
+                        style={{ width: cell.column.getSize() }}
+                        className={`px-3 py-2 ${sticky ? 'sticky left-0 z-10 bg-[#0f1117]' : ''}`}
+                      >
+                        {cell.column.id === 'rank' ? (
+                          <span className="text-slate-500 text-xs tabular-nums">{i + 1}</span>
+                        ) : (
+                          flexRender(cell.column.columnDef.cell, cell.getContext())
+                        )}
+                      </td>
+                    )
+                  })}
                 </tr>
               ))}
             </tbody>

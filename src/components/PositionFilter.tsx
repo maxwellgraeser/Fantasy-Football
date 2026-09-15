@@ -31,6 +31,7 @@ export function PositionFilter({ selected, onChange }: Props) {
       <button
         onClick={() => onChange([])}
         data-active={allSelected}
+        title="QB, RB, WR, TE. Select DEF to include defenses."
         className="px-2.5 py-1 rounded text-xs font-medium border border-slate-700 text-slate-400
           data-[active=true]:bg-slate-700/40 data-[active=true]:border-slate-500 data-[active=true]:text-white
           hover:border-slate-500 transition-colors"

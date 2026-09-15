@@ -1,7 +1,15 @@
+import type { ValueScoreBreakdown } from '@/types/scoring'
+import { Tooltip } from './Tooltip'
+import { ValueMath } from './ValueMath'
+
 interface Props {
   score: number
   size?: 'sm' | 'md' | 'lg'
   showLabel?: boolean
+  /** When given, wraps the badge in a Tooltip showing the worked Value math. */
+  scores?: ValueScoreBreakdown
+  /** Heading for the popover, e.g. the player's name. */
+  title?: string
 }
 
 function scoreColor(score: number): string {
@@ -20,14 +28,14 @@ function scoreBg(score: number): string {
   return 'bg-red-950/60 border-red-700/40'
 }
 
-export function ValueScoreBadge({ score, size = 'md', showLabel = false }: Props) {
+export function ValueScoreBadge({ score, size = 'md', showLabel = false, scores, title }: Props) {
   const sizeClasses = {
     sm: 'text-xs w-8 h-8',
     md: 'text-sm w-10 h-10',
     lg: 'text-2xl w-16 h-16 font-bold',
   }
 
-  return (
+  const badge = (
     <div className="flex flex-col items-center gap-0.5">
       <div
         className={`
@@ -43,6 +51,24 @@ export function ValueScoreBadge({ score, size = 'md', showLabel = false }: Props
       </div>
       {showLabel && <span className="text-xs text-slate-500">Value</span>}
     </div>
+  )
+
+  if (!scores) return badge
+
+  return (
+    <Tooltip
+      width={240}
+      content={
+        <ValueMath
+          contributions={scores.contributions}
+          rookieMultiplier={scores.rookieMultiplier}
+          valueScore={scores.valueScore}
+          title={title}
+        />
+      }
+    >
+      {badge}
+    </Tooltip>
   )
 }
 

@@ -29,8 +29,8 @@ export function clamp(x: number, min = 0, max = 100): number {
 }
 
 /**
- * Convert a z-score to a 0–100 grade using a logistic curve.
- * z = 0 → 50, z = 2 → ~88, z = -2 → ~12
+ * Convert a z-score to a grade using a tanh curve bounded to 25–75.
+ * z = 0 → 50, z = 1 → ~67, z = 2 → ~73, z = -2 → ~27
  */
 export function zToGrade(z: number): number {
   return clamp(Math.round(50 + 25 * Math.tanh(z * 0.8)))
