@@ -1,16 +1,19 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
+import type { SeasonMode } from '@/lib/season'
 
 interface SeasonState {
-  currentSeason: string   // e.g. "2024"
-  setCurrentSeason: (s: string) => void
-  getSeasonsToLoad: () => string[]
+  /** User's choice: last completed season (default) or current season-to-date. */
+  mode: SeasonMode
+  setMode: (mode: SeasonMode) => void
 }
 
-export const useSeasonStore = create<SeasonState>()((set, get) => ({
-  currentSeason: String(new Date().getFullYear()),
-  setCurrentSeason: (s) => set({ currentSeason: s }),
-  getSeasonsToLoad: () => {
-    const year = parseInt(get().currentSeason)
-    return Array.from({ length: 8 }, (_, i) => String(year - i))
-  },
-}))
+export const useSeasonStore = create<SeasonState>()(
+  persist(
+    (set) => ({
+      mode: 'completed',
+      setMode: (mode) => set({ mode }),
+    }),
+    { name: 'ff-season' },
+  ),
+)

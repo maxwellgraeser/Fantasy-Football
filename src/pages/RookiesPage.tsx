@@ -4,7 +4,7 @@ import { usePlayers } from '@/hooks/usePlayers'
 import { useValueScores } from '@/hooks/useValueScores'
 import { ValueScoreBadge } from '@/components/ValueScoreBadge'
 import { TeamGradeChip } from '@/components/TeamGradeChip'
-import { positionBadgeClass } from '@/components/PositionFilter'
+import { positionBadgeClass } from '@/lib/positions'
 import prospectsData from '@/data/prospects-2026.json'
 import type { FantasyPosition } from '@/types/sleeper'
 
@@ -25,7 +25,7 @@ export function RookiesPage() {
   // First-year players = years_exp === 1 (2025 NFL draft class, just finished their first season).
   // years_exp === 0 in Sleeper includes retired legends (e.g. Kurt Warner) with stale data — not rookies.
   const currentRookies = useMemo(() => {
-    return rows.filter((r) => r.yearsExp === 1 && r.position !== 'DEF')
+    return rows.filter((r) => r.scores.isRookie)
   }, [rows])
 
   // 2026 prospects list

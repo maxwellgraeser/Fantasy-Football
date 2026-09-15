@@ -1,26 +1,27 @@
 import type { SleeperPlayer, SleeperPlayerStats, FantasyPosition } from '@/types/sleeper'
-import type { PlayerGradeBreakdown, ScoringWeights } from '@/types/scoring'
+import type { PlayerGradeBreakdown, ScoringFormat } from '@/types/scoring'
 import { percentileRank, clamp, weightedMean } from './normalize'
+import { fantasyPoints } from './format'
 
 export interface SeasonRecord {
   season: string
   stats: SleeperPlayerStats | undefined
 }
 
-/** Compute fantasy PPG (half PPR) for a set of stats. */
-export function computePpg(stats: SleeperPlayerStats | undefined): number {
+export const FULL_SEASON_GAMES = 17
+
+/** Fantasy PPG for a set of stats in the given scoring format. */
+export function computePpg(stats: SleeperPlayerStats | undefined, format: ScoringFormat = 'half_ppr'): number {
   if (!stats) return 0
   const gp = Math.max(stats.gp ?? 1, 1)
-  const pts = stats.pts_half_ppr ?? 0
-  return pts / gp
+  return fantasyPoints(stats, format) / gp
 }
 
 /**
- * Age-curve adjustment: peak at 26, -0.5/yr before 24, -1/yr after 30, -2/yr after 34.
- * Returns 0 for positions where age curve doesn't apply (DEF) or age is unknown.
+ * Age-curve adjustment: 0 around the position's peak, negative before/after.
+ * Returns 0 for DEF or when age is unknown.
  */
 function ageCurveAdj(age: number | null | undefined, pos: FantasyPosition): number {
-  // DEF has no individual age; also guard against undefined (field missing from API)
   if (age == null || pos === 'DEF') return 0
   const peak = pos === 'RB' ? 25 : pos === 'QB' ? 29 : 27
   const diff = age - peak
@@ -30,75 +31,80 @@ function ageCurveAdj(age: number | null | undefined, pos: FantasyPosition): numb
   return -5 + -(diff - 5) * 1.5
 }
 
-/** Durability: % of 17 games played, averaged over available seasons. */
-function durabilityScore(records: SeasonRecord[]): number {
-  const maxGames = 17
+/**
+ * Durability: % of team games played, averaged over seasons with recorded stats.
+ * `seasonGames` maps season → games played league-wide so far (17 once complete),
+ * so partial seasons aren't penalized.
+ */
+export function durabilityScore(records: SeasonRecord[], seasonGames: Record<string, number> = {}): number {
   const vals = records
     .filter((r) => r.stats?.gp !== undefined)
-    .map((r) => Math.min((r.stats!.gp! / maxGames) * 100, 100))
+    .map((r) => {
+      const teamGames = Math.max(1, seasonGames[r.season] ?? FULL_SEASON_GAMES)
+      return Math.min((r.stats!.gp! / teamGames) * 100, 100)
+    })
   if (!vals.length) return 50
   return vals.reduce((a, b) => a + b, 0) / vals.length
 }
 
+export interface PlayerGradeOptions {
+  /** Normalized recency weights for [selected season, -1, -2]. */
+  recency: [number, number, number]
+  format: ScoringFormat
+  seasonGames: Record<string, number>
+}
+
 /**
  * Compute PlayerGrade (0–100) for a single player vs a field of peers.
- * `peerPpgs` = all PPG values for players at same position this season.
+ * `peerPpgs` = PPG values for players at the same position in the selected season.
  *
- * DEF units are scored differently: no age curve, no efficiency proxy —
- * just PPG percentile (vs other DEFs) and durability.
+ * Skill positions: 55% PPG percentile, 20% age-adjusted production, 25% durability.
+ * DEF: 75% PPG percentile, 25% durability.
  */
 export function computePlayerGrade(
   player: SleeperPlayer,
   records: SeasonRecord[],
   peerPpgs: number[],
-  weights: ScoringWeights,
+  { recency, format, seasonGames }: PlayerGradeOptions,
 ): { grade: number; breakdown: PlayerGradeBreakdown; weightedPpg: number } {
   const pos = (player.fantasy_positions?.[0] ?? 'WR') as FantasyPosition
 
-  // Weighted recency PPG
-  const ppgs = records.map((r) => computePpg(r.stats))
-  const recencyWeights = [weights.recencyY1, weights.recencyY2, weights.recencyY3]
+  const ppgs = records.map((r) => computePpg(r.stats, format))
   const weightedPpg = weightedMean(
-    ppgs.slice(0, 3).map((ppg, i) => ({ value: ppg, weight: recencyWeights[i] ?? 0 })),
+    ppgs.slice(0, 3).map((ppg, i) => ({ value: ppg, weight: recency[i] ?? 0 })),
   )
 
   const ppgPercentile = percentileRank(weightedPpg, peerPpgs)
-  const durability = durabilityScore(records)
+  const durability = durabilityScore(records, seasonGames)
 
   if (pos === 'DEF') {
-    // DEF grade: purely PPG percentile vs other defenses + durability
-    const grade = clamp(Math.round(
-      weightedMean([
-        { value: ppgPercentile, weight: 0.75 },
-        { value: durability,    weight: 0.25 },
-      ]),
-    ))
+    // Team defenses play every game, so durability carries no signal
+    const grade = clamp(Math.round(ppgPercentile))
     const breakdown: PlayerGradeBreakdown = {
       ppgPercentile,
       recentPpg: weightedPpg,
       ageCurveAdj: 0,
+      ageAdjustedPct: ppgPercentile,
       durabilityPct: durability,
-      efficiencyPct: ppgPercentile, // same as PPG percentile for DEF
     }
     return { grade, breakdown, weightedPpg }
   }
 
-  // Skill-position grade
   const ageCurve = ageCurveAdj(player.age, pos)
-  const efficiencyPct = clamp(ppgPercentile + ageCurve)
+  const ageAdjustedPct = clamp(ppgPercentile + ageCurve)
 
   const breakdown: PlayerGradeBreakdown = {
     ppgPercentile,
     recentPpg: weightedPpg,
     ageCurveAdj: ageCurve,
+    ageAdjustedPct,
     durabilityPct: durability,
-    efficiencyPct,
   }
 
   const grade = clamp(Math.round(
     weightedMean([
       { value: ppgPercentile,  weight: 0.55 },
-      { value: efficiencyPct,  weight: 0.20 },
+      { value: ageAdjustedPct, weight: 0.20 },
       { value: durability,     weight: 0.25 },
     ]),
   ))

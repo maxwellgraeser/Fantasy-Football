@@ -15,17 +15,6 @@ const posColor: Record<string, string> = {
   DEF: 'data-[active=true]:bg-violet-600/20 data-[active=true]:border-violet-500 data-[active=true]:text-violet-300',
 }
 
-export function positionBadgeClass(pos: string): string {
-  const map: Record<string, string> = {
-    QB:  'text-rose-300 bg-rose-950/50',
-    RB:  'text-emerald-300 bg-emerald-950/50',
-    WR:  'text-sky-300 bg-sky-950/50',
-    TE:  'text-amber-300 bg-amber-950/50',
-    DEF: 'text-violet-300 bg-violet-950/50',
-  }
-  return map[pos] ?? 'text-slate-400 bg-slate-800/50'
-}
-
 export function PositionFilter({ selected, onChange }: Props) {
   function toggle(pos: FantasyPosition) {
     if (selected.includes(pos)) {

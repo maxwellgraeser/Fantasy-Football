@@ -1,10 +1,13 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Navbar } from '@/components/Navbar'
-import { PlayersPage } from '@/pages/PlayersPage'
-import { PlayerDetailPage } from '@/pages/PlayerDetailPage'
-import { RookiesPage } from '@/pages/RookiesPage'
-import { WatchlistPage } from '@/pages/WatchlistPage'
+import { ScoresProvider } from '@/components/ScoresProvider'
+
+const PlayersPage = lazy(() => import('@/pages/PlayersPage').then((m) => ({ default: m.PlayersPage })))
+const PlayerDetailPage = lazy(() => import('@/pages/PlayerDetailPage').then((m) => ({ default: m.PlayerDetailPage })))
+const RookiesPage = lazy(() => import('@/pages/RookiesPage').then((m) => ({ default: m.RookiesPage })))
+const WatchlistPage = lazy(() => import('@/pages/WatchlistPage').then((m) => ({ default: m.WatchlistPage })))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -15,23 +18,37 @@ const queryClient = new QueryClient({
   },
 })
 
+function PageFallback() {
+  return (
+    <div className="max-w-7xl mx-auto px-4 py-6 space-y-2">
+      {Array.from({ length: 8 }).map((_, i) => (
+        <div key={i} className="h-10 bg-slate-800/40 rounded animate-pulse" />
+      ))}
+    </div>
+  )
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <div className="min-h-screen bg-[#0f1117]">
-          <Navbar />
-          <main>
-            <Routes>
-              <Route path="/" element={<Navigate to="/players" replace />} />
-              <Route path="/players" element={<PlayersPage />} />
-              <Route path="/player/:id" element={<PlayerDetailPage />} />
-              <Route path="/rookies" element={<RookiesPage />} />
-              <Route path="/watchlist" element={<WatchlistPage />} />
-            </Routes>
-          </main>
-        </div>
-      </BrowserRouter>
+      <ScoresProvider>
+        <BrowserRouter>
+          <div className="min-h-screen bg-[#0f1117]">
+            <Navbar />
+            <main>
+              <Suspense fallback={<PageFallback />}>
+                <Routes>
+                  <Route path="/" element={<Navigate to="/players" replace />} />
+                  <Route path="/players" element={<PlayersPage />} />
+                  <Route path="/player/:id" element={<PlayerDetailPage />} />
+                  <Route path="/rookies" element={<RookiesPage />} />
+                  <Route path="/watchlist" element={<WatchlistPage />} />
+                </Routes>
+              </Suspense>
+            </main>
+          </div>
+        </BrowserRouter>
+      </ScoresProvider>
     </QueryClientProvider>
   )
 }

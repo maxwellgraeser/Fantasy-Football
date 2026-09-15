@@ -1,32 +1,25 @@
-import { useMemo } from 'react'
-import { usePlayers } from './usePlayers'
-import { useMultiSeasonStats } from './useSeasonStats'
-import { useSeasonStore } from '@/store/season'
-import { useWeightsStore } from '@/store/weights'
-import { buildPlayerRows } from '@/lib/scoring/composite'
+import { createContext, useContext } from 'react'
+import type { PlayerRow, ScoringFormat } from '@/types/scoring'
+import type { SeasonContext } from './useSeasonContext'
 
-/** Master hook: combines players + multi-season stats + weights → sorted PlayerRow array. */
-export function useValueScores() {
-  const { data: players, isLoading: playersLoading, error: playersError } = usePlayers()
-  const { weights } = useWeightsStore()
-  const { getSeasonsToLoad } = useSeasonStore()
+export interface ValueScoresState {
+  /** Eligible players with Value scores, sorted by Value (desc). Shared across pages. */
+  rows: PlayerRow[]
+  isLoading: boolean
+  error: Error | null
+  season: SeasonContext
+  /** Games played so far in the selected season (17 once complete). */
+  gamesInSelectedSeason: number
+  scoringFormat: ScoringFormat
+  /** True while a weights/format change is being applied in the background. */
+  isRecomputing: boolean
+}
 
-  const seasons = getSeasonsToLoad()
-  const seasonQueries = useMultiSeasonStats(seasons)
+export const ValueScoresContext = createContext<ValueScoresState | null>(null)
 
-  const isLoading = playersLoading || seasonQueries.some((q) => q.query.isLoading)
-  const error = playersError ?? seasonQueries.find((q) => q.query.error)?.query.error ?? null
-
-  const rows = useMemo(() => {
-    const primary = seasonQueries[0]
-    if (!players || !primary?.query.data) return []
-
-    const seasonStatsList = seasonQueries
-      .filter((q) => q.query.data)
-      .map((q) => ({ season: q.season, stats: q.query.data! }))
-
-    return buildPlayerRows(players, seasonStatsList, weights)
-  }, [players, weights, ...seasonQueries.map((q) => q.query.data)])
-
-  return { rows, isLoading, error }
+/** Shared scoring state — computed once in <ScoresProvider>. */
+export function useValueScores(): ValueScoresState {
+  const ctx = useContext(ValueScoresContext)
+  if (!ctx) throw new Error('useValueScores must be used inside <ScoresProvider>')
+  return ctx
 }

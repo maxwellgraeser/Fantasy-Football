@@ -63,10 +63,10 @@ export function ScoreBreakdown({ scores }: Props) {
       <div className="mt-4 space-y-2">
         <Section title="Player Grade" grade={scores.playerGrade} color="bg-blue-500">
           <ScoreBar value={pb.ppgPercentile} label="PPG Percentile" color="blue" />
-          {scores.teamBreakdown.position !== 'DEF' && (
+          {tb && (
             <>
               <ScoreBar value={Math.max(0, Math.round(50 + pb.ageCurveAdj * 5))} label="Age Curve"   color="blue" />
-              <ScoreBar value={pb.efficiencyPct} label="Efficiency" color="blue" />
+              <ScoreBar value={pb.ageAdjustedPct} label="Age-adj. prod." color="blue" />
             </>
           )}
           <ScoreBar value={Math.round(pb.durabilityPct)} label="Durability %" color="blue" />
@@ -75,7 +75,7 @@ export function ScoreBreakdown({ scores }: Props) {
           </div>
         </Section>
 
-        {scores.teamBreakdown.position !== 'DEF' && (
+        {ob && scores.opportunityGrade !== null && (
           <Section title="Opportunity Grade" grade={scores.opportunityGrade} color="bg-purple-500">
             <ScoreBar value={ob.depthChartScore} label="Depth Chart"  color="purple" />
             <ScoreBar value={ob.targetSharePct}  label="Target Share" color="purple" />
@@ -84,34 +84,13 @@ export function ScoreBreakdown({ scores }: Props) {
           </Section>
         )}
 
-        <Section title="Team Grade" grade={scores.teamGrade} color="bg-amber-500">
-          {tb.rushAttPerGame !== undefined && (
-            <ScoreBar value={Math.round(Math.min(tb.rushAttPerGame * 3.5, 100))} label="Rush Att/G" color="amber" />
-          )}
-          {tb.rushYdPerGame !== undefined && (
-            <ScoreBar value={Math.round(Math.min(tb.rushYdPerGame / 2, 100))} label="Rush Yd/G" color="amber" />
-          )}
-          {tb.rzRushSharePct !== undefined && (
-            <ScoreBar value={Math.round(Math.min(tb.rzRushSharePct * 6, 100))} label="RZ Rush %" color="amber" />
-          )}
-          {tb.passAttPerGame !== undefined && (
-            <ScoreBar value={Math.round(Math.min(tb.passAttPerGame * 2.5, 100))} label="Pass Att/G" color="amber" />
-          )}
-          {tb.passYdPerGame !== undefined && (
-            <ScoreBar value={Math.round(Math.min(tb.passYdPerGame / 4, 100))} label="Pass Yd/G" color="amber" />
-          )}
-          {tb.airYdPerGame !== undefined && (
-            <ScoreBar value={Math.round(Math.min(tb.airYdPerGame / 3, 100))} label="Air Yd/G" color="amber" />
-          )}
-          {tb.neutralPassRate !== undefined && (
-            <ScoreBar value={Math.round(tb.neutralPassRate)} label="Pass Rate" color="amber" />
-          )}
-          {tb.overallGrade !== undefined && (
-            <div className="pt-1 text-xs text-slate-500">
-              Team Grade (position): {tb.overallGrade}
-            </div>
-          )}
-        </Section>
+        {tb && scores.teamGrade !== null && (
+          <Section title="Team Grade" grade={scores.teamGrade} color="bg-amber-500">
+            {tb.metrics.map((m) => (
+              <ScoreBar key={m.key} value={m.percentile} label={`${m.label} (${m.display})`} color="amber" />
+            ))}
+          </Section>
+        )}
       </div>
 
       {scores.isProvisional && (

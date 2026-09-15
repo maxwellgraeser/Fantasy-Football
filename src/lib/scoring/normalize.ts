@@ -9,14 +9,6 @@ export function percentileRank(value: number, values: number[]): number {
   return Math.round(((below + equal * 0.5) / values.length) * 100)
 }
 
-/**
- * Z-score a value given mean and standard deviation.
- */
-export function zScore(value: number, mean: number, stdDev: number): number {
-  if (stdDev === 0) return 0
-  return (value - mean) / stdDev
-}
-
 export function mean(values: number[]): number {
   if (values.length === 0) return 0
   return values.reduce((a, b) => a + b, 0) / values.length

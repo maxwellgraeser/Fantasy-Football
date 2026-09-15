@@ -5,7 +5,7 @@ import { useWatchlistStore } from '@/store/watchlist'
 import { ValueScoreBadge } from '@/components/ValueScoreBadge'
 import { TeamGradeChip } from '@/components/TeamGradeChip'
 import { TrendSparkline } from '@/components/TrendSparkline'
-import { positionBadgeClass } from '@/components/PositionFilter'
+import { positionBadgeClass } from '@/lib/positions'
 
 export function WatchlistPage() {
   const { rows, isLoading } = useValueScores()
@@ -89,9 +89,9 @@ export function WatchlistPage() {
                   <td className="px-3 py-2 text-slate-300 text-xs tabular-nums font-medium">{r.scores.playerGrade}</td>
                   <td className="px-3 py-2 text-slate-300 text-xs tabular-nums font-medium">{r.scores.opportunityGrade}</td>
                   <td className="px-3 py-2 text-slate-300 text-xs tabular-nums font-medium">{r.scores.teamGrade}</td>
-                  <td className="px-3 py-2 text-slate-300 text-xs tabular-nums">{(r.ppgHistory[0]?.ppg ?? 0).toFixed(1)}</td>
+                  <td className="px-3 py-2 text-slate-300 text-xs tabular-nums">{(r.seasonPpg ?? 0).toFixed(1)}</td>
                   <td className="px-3 py-2">
-                    <TrendSparkline data={r.sparkline} />
+                    <TrendSparkline data={r.sparkline.map((h) => h.ppg)} />
                   </td>
                   <td className="px-3 py-2">
                     {r.injuryStatus && (

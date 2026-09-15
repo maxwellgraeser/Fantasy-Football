@@ -1,18 +1,17 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchAllPlayers } from '@/lib/sleeper'
+import { fetchAllPlayers, trimPlayers } from '@/lib/sleeper'
 import { getCachedPlayers, setCachedPlayers } from '@/lib/cache'
 import type { SleeperPlayersMap } from '@/types/sleeper'
 
+/** Scored-position players (QB/RB/WR/TE/DEF), trimmed to the fields the app uses. */
 export function usePlayers() {
   return useQuery<SleeperPlayersMap>({
     queryKey: ['players'],
     queryFn: async () => {
-      // 1. Try IndexedDB cache first
       const cached = await getCachedPlayers<SleeperPlayersMap>()
       if (cached) return cached
 
-      // 2. Fetch from Sleeper
-      const data = await fetchAllPlayers()
+      const data = trimPlayers(await fetchAllPlayers())
       await setCachedPlayers(data)
       return data
     },

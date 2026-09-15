@@ -28,7 +28,7 @@ async function setCache<T>(key: string, data: T): Promise<void> {
 }
 
 // Version bump: bump this when the data schema changes to force cache invalidation
-const CACHE_VERSION = 'v3'
+const CACHE_VERSION = 'v4'
 
 /** Call once on app startup to evict caches from old schema versions. */
 export async function clearStaleCache(): Promise<void> {
@@ -60,12 +60,4 @@ export async function getCachedStats<T>(season: string): Promise<T | null> {
 
 export async function setCachedStats<T>(season: string, data: T): Promise<void> {
   return setCache(`sleeper:stats:${season}`, data)
-}
-
-export async function getCachedValue<T>(key: string, ttlMs = TTL_STATS_MS): Promise<T | null> {
-  return getWithTTL<T>(key, ttlMs)
-}
-
-export async function setCachedValue<T>(key: string, data: T): Promise<void> {
-  return setCache(key, data)
 }

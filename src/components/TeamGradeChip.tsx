@@ -2,7 +2,7 @@ import type { NFLTeam, FantasyPosition } from '@/types/sleeper'
 
 interface Props {
   team: NFLTeam | null
-  grade?: number
+  grade?: number | null
   position?: FantasyPosition
   showGrade?: boolean
 }
@@ -22,11 +22,11 @@ export function TeamGradeChip({ team, grade, showGrade = true }: Props) {
       className={`
         inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-mono font-semibold
         border
-        ${showGrade && grade !== undefined ? gradeColor(grade) : 'text-slate-400 bg-slate-800/50 border-slate-700/40'}
+        ${showGrade && grade != null ? gradeColor(grade) : 'text-slate-400 bg-slate-800/50 border-slate-700/40'}
       `}
     >
       {team}
-      {showGrade && grade !== undefined && (
+      {showGrade && grade != null && (
         <span className="opacity-70 font-sans">{grade}</span>
       )}
     </span>

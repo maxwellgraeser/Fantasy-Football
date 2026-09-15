@@ -13,7 +13,8 @@ import { useValueScores } from '@/hooks/useValueScores'
 import { ValueScoreBadge } from '@/components/ValueScoreBadge'
 import { TeamGradeChip } from '@/components/TeamGradeChip'
 import { TrendSparkline } from '@/components/TrendSparkline'
-import { PositionFilter, positionBadgeClass } from '@/components/PositionFilter'
+import { PositionFilter } from '@/components/PositionFilter'
+import { positionBadgeClass } from '@/lib/positions'
 import { WeightsDrawer } from '@/components/WeightsDrawer'
 import { useWatchlistStore } from '@/store/watchlist'
 import type { PlayerRow } from '@/types/scoring'
@@ -155,7 +156,7 @@ export function PlayersPage() {
       {
         id: 'ppg',
         header: 'PPG',
-        accessorFn: (r) => r.ppgHistory[0]?.ppg ?? 0,
+        accessorFn: (r) => r.seasonPpg ?? 0,
         cell: ({ getValue }) => (
           <span className="text-slate-300 text-xs tabular-nums">{getValue<number>().toFixed(1)}</span>
         ),
@@ -165,7 +166,7 @@ export function PlayersPage() {
         id: 'trend',
         header: 'Trend',
         accessorFn: (r) => r.sparkline,
-        cell: ({ getValue }) => <TrendSparkline data={getValue<number[]>()} />,
+        cell: ({ row }) => <TrendSparkline data={row.original.sparkline.map((h) => h.ppg)} />,
         enableSorting: false,
         size: 90,
       },

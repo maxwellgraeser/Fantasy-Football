@@ -13,34 +13,22 @@ export interface SleeperPlayer {
   player_id: string
   first_name: string
   last_name: string
-  full_name?: string
+  full_name?: string | null
   position: string
   fantasy_positions: FantasyPosition[]
   team: NFLTeam | null
   status: 'Active' | 'Inactive' | 'Injured Reserve' | 'Practice Squad' | string | null
   injury_status: InjuryStatus
-  injury_notes?: string | null
-  injury_start_date?: string | null
   years_exp: number | undefined
   age: number | null
   college: string | null
-  height: string | null
+  height: string | null       // inches, e.g. "72"
   weight: string | null
   number: number | null
-  depth_chart_position: number | null
+  depth_chart_position: string | null
   depth_chart_order: number | null
-  search_rank: number | null
-  hashtag: string | null
-  sportradar_id: string | null
-  yahoo_id: number | null
-  espn_id: number | null
-  fantasy_data_id: number | null
-  rotowire_id: number | null
-  rotoworld_id: number | null
-  stats_id: string | null
-  birth_country: string | null
-  sport: 'nfl'
-  metadata?: Record<string, string> | null
+  search_rank: number | null  // 9999999 = unranked
+  metadata?: { rookie_year?: string } | null
 }
 
 export type SleeperPlayersMap = Record<string, SleeperPlayer>
@@ -89,7 +77,7 @@ export interface SleeperPlayerStats {
   safe?: number          // safeties
   blk_kick?: number      // blocked kicks/punts
   pts_allow?: number     // points allowed
-  // Fantasy points (half PPR)
+  // Fantasy points
   pts_half_ppr?: number
   pts_ppr?: number
   pts_std?: number
@@ -99,22 +87,6 @@ export interface SleeperPlayerStats {
 
 export type SleeperSeasonStats = Record<string, SleeperPlayerStats>
 // key = player_id
-
-// ─── Sleeper Weekly Stats ────────────────────────────────────────────────────
-
-export interface SleeperWeeklyStats {
-  player_id: string
-  week: number
-  season: string
-  stats: SleeperPlayerStats
-}
-
-// ─── Sleeper Trending ────────────────────────────────────────────────────────
-
-export interface SleeperTrendingPlayer {
-  player_id: string
-  count: number
-}
 
 // ─── NFL State ───────────────────────────────────────────────────────────────
 

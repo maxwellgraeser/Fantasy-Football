@@ -1,170 +1,238 @@
-import type { FantasyPosition, NFLTeam } from '@/types/sleeper'
-import type { SleeperSeasonStats } from '@/types/sleeper'
 import type {
-  ValueScoreBreakdown,
-  ScoringWeights,
-  TeamGradeBreakdown,
+  FantasyPosition,
+  SleeperPlayer,
+  SleeperPlayersMap,
+  SleeperPlayerStats,
+  SleeperSeasonStats,
+} from '@/types/sleeper'
+import type {
+  OpportunityGradeBreakdown,
+  PlayerGradeBreakdown,
   PlayerRow,
+  ScoringFormat,
+  ScoringWeights,
+  SeasonLine,
+  TeamGradeBreakdown,
 } from '@/types/scoring'
-import { clamp } from './normalize'
-import { computePlayerGrade, computePpg, type SeasonRecord } from './playerGrade'
+import { DEFAULT_WEIGHTS } from '@/types/scoring'
+import { formatHeight, playerName, primaryPosition } from '@/lib/positions'
+import { computePlayerGrade, computePpg, FULL_SEASON_GAMES, type SeasonRecord } from './playerGrade'
 import { computeOpportunityGrade } from './opportunityGrade'
-import { computeAllTeamGrades } from './teamGrade'
-import type { SleeperPlayersMap } from '@/types/sleeper'
+import { computeAllTeamGrades, seasonGamesPlayed } from './teamGrade'
+import { computeValue, normalizeRecency } from './value'
+import { isEligiblePlayer } from './eligibility'
 
-const SKILL_POSITIONS: FantasyPosition[] = ['QB', 'RB', 'WR', 'TE', 'DEF']
-const SEASONS_NEEDED = 3
+const SEASONS_FOR_GRADE = 3
+const SPARKLINE_SEASONS = 5
+const UNRANKED = 9999999
+
+export interface SeasonStatsEntry {
+  season: string
+  stats: SleeperSeasonStats
+}
+
+export interface GradeOptions {
+  recency: Pick<ScoringWeights, 'recencyY1' | 'recencyY2' | 'recencyY3'>
+  format: ScoringFormat
+  /** Season still under way (flags SeasonLine.inProgress), or null. */
+  inProgressSeason: string | null
+  /** Newest league season — used for the years_exp rookie fallback. */
+  latestSeason: string
+}
+
+export interface GradeResult {
+  playerGrade: number
+  opportunityGrade: number | null
+  teamGrade: number | null
+  playerBreakdown: PlayerGradeBreakdown
+  opportunityBreakdown: OpportunityGradeBreakdown | null
+  teamBreakdown: TeamGradeBreakdown | null
+  isRookie: boolean
+}
+
+/** A row with grades computed but no weights applied yet. */
+export type GradedRow = Omit<PlayerRow, 'scores'> & { grades: GradeResult }
 
 /**
- * Build all PlayerRows for the table.
- * seasonStatsList: array of { season, stats } most-recent first.
+ * Provisional rookie for `season`: hasn't completed an NFL season before it.
+ * Uses Sleeper's metadata.rookie_year, falling back to years_exp.
  */
-export function buildPlayerRows(
+export function isRookieFor(player: SleeperPlayer, season: string, latestSeason: string): boolean {
+  if (primaryPosition(player) === 'DEF') return false
+  const rookieYear = player.metadata?.rookie_year
+  if (rookieYear) return Number(rookieYear) >= Number(season)
+  if (player.years_exp == null) return false
+  return player.years_exp <= Number(latestSeason) - Number(season)
+}
+
+function emptyPositionMap<T>(make: () => T): Record<FantasyPosition, T> {
+  return {
+    QB: make(), RB: make(), WR: make(), TE: make(), K: make(),
+    DEF: make(), DL: make(), LB: make(), DB: make(), IDP_FLEX: make(),
+  }
+}
+
+/**
+ * Compute grades for every eligible player.
+ * `seasonStatsList` is most-recent first; index 0 is the selected season.
+ */
+export function buildGradedRows(
   players: SleeperPlayersMap,
-  seasonStatsList: Array<{ season: string; stats: SleeperSeasonStats }>,
-  weights: ScoringWeights,
-): PlayerRow[] {
+  seasonStatsList: SeasonStatsEntry[],
+  opts: GradeOptions,
+): GradedRow[] {
   if (seasonStatsList.length === 0) return []
 
-  // ── 1. Build team grade maps per season, then blend ─────────────────────
-  const teamGradeMaps = seasonStatsList.map(({ stats }) =>
-    computeAllTeamGrades(stats),
-  )
+  const [selected, previous] = seasonStatsList
+  const { format } = opts
+  const recency = normalizeRecency(opts.recency)
 
-  // Use the most-recent season's team grades as the primary
-  const primaryTeamGrades = teamGradeMaps[0]
-
-  // ── 2. Collect peer PPG arrays per position ──────────────────────────────
-  const peerPpgs: Record<FantasyPosition, number[]> = {
-    QB: [], RB: [], WR: [], TE: [], K: [], DEF: [], DL: [], LB: [], DB: [], IDP_FLEX: [],
+  const seasonGames: Record<string, number> = {}
+  for (const { season, stats } of seasonStatsList) {
+    seasonGames[season] = seasonGamesPlayed(stats) || FULL_SEASON_GAMES
   }
 
-  const allPlayersList = Object.values(players).filter((p) => {
-    if (!SKILL_POSITIONS.includes((p.fantasy_positions?.[0] ?? '') as FantasyPosition)) return false
-    // Exclude retired/historical players — Inactive with no team and no recent NFL presence
-    if (p.status === 'Inactive' && !p.team) return false
-    return true
-  })
+  // ── 1. Team grades for the selected season only ─────────────────────────
+  const teamGrades = computeAllTeamGrades(selected.stats)
 
-  for (const player of allPlayersList) {
-    const pos = (player.fantasy_positions?.[0] ?? '') as FantasyPosition
-    const stats = seasonStatsList[0]?.stats?.[player.player_id]
-    const ppg = computePpg(stats)
+  // ── 2. Eligible players + peer PPGs per position ────────────────────────
+  const eligible: Array<{ player: SleeperPlayer; pos: FantasyPosition }> = []
+  const peerPpgs = emptyPositionMap<number[]>(() => [])
+
+  for (const player of Object.values(players)) {
+    const pos = primaryPosition(player)
+    if (!pos || !player.player_id) continue
+    if (!isEligiblePlayer(player, selected.stats, previous?.stats)) continue
+    eligible.push({ player, pos })
+    const ppg = computePpg(selected.stats[player.player_id], format)
     if (ppg > 0) peerPpgs[pos].push(ppg)
   }
 
-  // ── 3. Collect position stats arrays for opportunity grading ─────────────
-  const positionStatsArrays: Record<FantasyPosition, ReturnType<typeof Object.values>> = {
-    QB: [], RB: [], WR: [], TE: [], K: [], DEF: [], DL: [], LB: [], DB: [], IDP_FLEX: [],
-  }
-
-  for (const [pid, stats] of Object.entries(seasonStatsList[0]?.stats ?? {})) {
+  // ── 3. Position stat arrays for opportunity percentiles ─────────────────
+  const positionStats = emptyPositionMap<SleeperPlayerStats[]>(() => [])
+  for (const [pid, stats] of Object.entries(selected.stats)) {
     const player = players[pid]
-    if (!player) continue
-    const pos = (player.fantasy_positions?.[0] ?? '') as FantasyPosition
-    if (SKILL_POSITIONS.includes(pos)) {
-      positionStatsArrays[pos].push(stats)
-    }
+    const pos = player ? primaryPosition(player) : null
+    if (pos) positionStats[pos].push(stats)
   }
 
-  // ── 4. Build rows ────────────────────────────────────────────────────────
-  const rows: PlayerRow[] = []
-
-  for (const player of allPlayersList) {
-    if (!player.player_id) continue
-
-    const pos = (player.fantasy_positions?.[0] ?? 'WR') as FantasyPosition
-    if (!SKILL_POSITIONS.includes(pos)) continue
-
-    // Collect per-season records (most-recent first) — all seasons for history, capped for grading
+  // ── 4. Grade rows ───────────────────────────────────────────────────────
+  return eligible.map(({ player, pos }) => {
     const allRecords: SeasonRecord[] = seasonStatsList.map(({ season, stats }) => ({
       season,
       stats: stats[player.player_id],
     }))
-    const records = allRecords.slice(0, SEASONS_NEEDED)
+    const records = allRecords.slice(0, SEASONS_FOR_GRADE)
 
-    const yearsExp = player.years_exp ?? 0
+    const lines: SeasonLine[] = allRecords.map((r) => ({
+      season: r.season,
+      ppg: computePpg(r.stats, format),
+      gp: r.stats?.gp ?? 0,
+      inProgress: r.season === opts.inProgressSeason,
+      raw: r.stats,
+    }))
+    const ppgHistory = lines.filter((h, i) => i === 0 || h.gp > 0)
+    const sparkline = lines.filter((h) => h.gp > 0).slice(0, SPARKLINE_SEASONS).reverse()
 
-    // Skip: undrafted/unsigned (years_exp=0, no team, no production) — these are prospects, not active players
-    const hasAnyProduction = allRecords.some((r) => r.stats && (r.stats.gp ?? 0) > 0)
-    if (yearsExp === 0 && !player.team && !hasAnyProduction && pos !== 'DEF') continue
-    // Skip: veteran with zero recorded NFL activity
-    if (!hasAnyProduction && yearsExp > 2) continue
-
-    // PPG history for sparkline — use full available history, trimmed to active seasons
-    const ppgHistory = allRecords
-      .map((r) => ({ season: r.season, ppg: computePpg(r.stats), gp: r.stats?.gp ?? 0, raw: r.stats }))
-      .filter((h, i) => i === 0 || h.gp > 0)
-
-    // PlayerGrade
     const { grade: playerGrade, breakdown: playerBreakdown } = computePlayerGrade(
       player,
       records,
       peerPpgs[pos],
-      weights,
+      { recency, format, seasonGames },
     )
 
-    // OpportunityGrade
-    const { grade: opportunityGrade, breakdown: opportunityBreakdown } = computeOpportunityGrade(
-      player,
-      records[0]?.stats,
-      positionStatsArrays[pos] as import('@/types/sleeper').SleeperPlayerStats[],
-    )
+    let opportunityGrade: number | null = null
+    let opportunityBreakdown: OpportunityGradeBreakdown | null = null
+    let teamGrade: number | null = null
+    let teamBreakdown: TeamGradeBreakdown | null = null
 
-    // TeamGrade
-    let teamGrade = 50
-    let teamBreakdown: TeamGradeBreakdown = {
-      overallGrade: 50,
-      position: pos,
-      team: player.team,
-    }
-    if (player.team) {
-      const tg = primaryTeamGrades.get(player.team as NFLTeam)?.get(pos)
-      if (tg) {
-        teamGrade = tg.overallGrade
-        teamBreakdown = tg
-      }
+    // DEF is scored on Player grade only — opportunity/team don't apply.
+    if (pos !== 'DEF') {
+      const opp = computeOpportunityGrade(player, records[0]?.stats, positionStats[pos])
+      opportunityGrade = opp.grade
+      opportunityBreakdown = opp.breakdown
+
+      const tg = player.team ? teamGrades.get(player.team)?.get(pos) : undefined
+      teamGrade = tg?.overallGrade ?? 50
+      teamBreakdown = tg ?? { overallGrade: 50, position: pos, team: player.team, metrics: [] }
     }
 
-    // Composite ValueScore
-    // years_exp=1 = first NFL season (2025 draft class). years_exp=0 = undrafted/unsigned prospect.
-    const isRookie = yearsExp === 1 && pos !== 'DEF'
-    const rookiePenalty = isRookie ? 0.85 : 1
+    const searchRank = player.search_rank != null && player.search_rank < UNRANKED ? player.search_rank : null
 
-    const valueScore = clamp(Math.round(
-      (weights.wPlayer * playerGrade
-       + weights.wOpportunity * opportunityGrade
-       + weights.wTeam * teamGrade)
-      * rookiePenalty,
-    ))
-
-    const scores: ValueScoreBreakdown = {
-      valueScore,
-      playerGrade,
-      opportunityGrade,
-      teamGrade,
-      playerBreakdown,
-      opportunityBreakdown,
-      teamBreakdown,
-      isRookie,
-      isProvisional: isRookie,
-    }
-
-    rows.push({
+    return {
       playerId: player.player_id,
-      fullName: player.full_name ?? `${player.first_name} ${player.last_name}`,
+      fullName: playerName(player),
       position: pos,
-      team: player.team,
-      age: player.age,
+      team: player.team ?? null,
+      age: player.age ?? null,
       yearsExp: player.years_exp ?? 0,
-      injuryStatus: player.injury_status,
-      depthChartOrder: player.depth_chart_order,
+      injuryStatus: player.injury_status ?? null,
+      depthChartOrder: player.depth_chart_order ?? null,
+      college: player.college ?? null,
+      height: formatHeight(player.height),
+      weight: player.weight ?? null,
+      searchRank,
+      rookieYear: player.metadata?.rookie_year ?? null,
+      seasonPpg: lines[0].gp > 0 ? lines[0].ppg : null,
+      seasonGp: lines[0].gp,
       ppgHistory,
-      scores,
-      sparkline: ppgHistory.map((h) => h.ppg).reverse(),
-    })
-  }
+      sparkline,
+      grades: {
+        playerGrade,
+        opportunityGrade,
+        teamGrade,
+        playerBreakdown,
+        opportunityBreakdown,
+        teamBreakdown,
+        isRookie: isRookieFor(player, selected.season, opts.latestSeason),
+      },
+    }
+  })
+}
 
-  // Sort by value score descending
-  return rows.sort((a, b) => b.scores.valueScore - a.scores.valueScore)
+/** Apply grade weights to graded rows → PlayerRows sorted by Value (desc). Cheap; safe per slider tick. */
+export function applyWeights(graded: GradedRow[], weights: ScoringWeights): PlayerRow[] {
+  const rows: PlayerRow[] = graded.map(({ grades, ...row }) => {
+    const value = computeValue(grades, weights)
+    return {
+      ...row,
+      scores: {
+        valueScore: value.valueScore,
+        playerGrade: grades.playerGrade,
+        opportunityGrade: grades.opportunityGrade,
+        teamGrade: grades.teamGrade,
+        appliedWeights: value.appliedWeights,
+        contributions: value.contributions,
+        rookieMultiplier: value.rookieMultiplier,
+        playerBreakdown: grades.playerBreakdown,
+        opportunityBreakdown: grades.opportunityBreakdown,
+        teamBreakdown: grades.teamBreakdown,
+        isRookie: grades.isRookie,
+        isProvisional: grades.isRookie,
+      },
+    }
+  })
+
+  return rows.sort((a, b) =>
+    b.scores.valueScore - a.scores.valueScore
+    || b.scores.playerGrade - a.scores.playerGrade
+    || a.fullName.localeCompare(b.fullName),
+  )
+}
+
+/** Convenience: grade + weight in one call. */
+export function buildPlayerRows(
+  players: SleeperPlayersMap,
+  seasonStatsList: SeasonStatsEntry[],
+  weights: ScoringWeights = DEFAULT_WEIGHTS,
+  opts: Partial<Omit<GradeOptions, 'recency'>> = {},
+): PlayerRow[] {
+  const latestSeason = opts.latestSeason ?? seasonStatsList[0]?.season ?? String(new Date().getFullYear())
+  const graded = buildGradedRows(players, seasonStatsList, {
+    recency: weights,
+    format: opts.format ?? 'half_ppr',
+    inProgressSeason: opts.inProgressSeason ?? null,
+    latestSeason,
+  })
+  return applyWeights(graded, weights)
 }
