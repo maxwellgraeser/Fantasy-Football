@@ -34,7 +34,11 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
     combine: combineStats,
   })
 
-  const { recencyY1, recencyY2, recencyY3 } = deferredWeights
+  const {
+    recencyY1, recencyY2, recencyY3,
+    playerWPpg, playerWAge, playerWDurability,
+    oppWDepthChart, oppWTargetShare, oppWTouchShare, oppWRoleSteadiness,
+  } = deferredWeights
   const { seasonsToLoad, inProgressSeason, latestSeason } = season
 
   const graded = useMemo(() => {
@@ -42,12 +46,15 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
     const seasonStatsList = seasonsToLoad.map((s, i) => ({ season: s, stats: stats.data[i] ?? {} }))
     return buildGradedRows(players.data, seasonStatsList, {
       recency: { recencyY1, recencyY2, recencyY3 },
+      playerWeights: { playerWPpg, playerWAge, playerWDurability },
+      opportunityWeights: { oppWDepthChart, oppWTargetShare, oppWTouchShare, oppWRoleSteadiness },
       format: deferredFormat,
       inProgressSeason,
       latestSeason,
     })
   }, [players.data, stats.isLoading, stats.data, seasonsToLoad, inProgressSeason, latestSeason,
-      recencyY1, recencyY2, recencyY3, deferredFormat])
+      recencyY1, recencyY2, recencyY3, playerWPpg, playerWAge, playerWDurability,
+      oppWDepthChart, oppWTargetShare, oppWTouchShare, oppWRoleSteadiness, deferredFormat])
 
   const rows = useMemo(() => applyWeights(graded, deferredWeights), [graded, deferredWeights])
 

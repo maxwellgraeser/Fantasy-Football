@@ -1,10 +1,11 @@
-# GridironIQ
+# Min Max Fantasy
 
 A fantasy-football player-value dashboard built on live [Sleeper](https://docs.sleeper.com/) data. Every QB, RB, WR, TE and team defense gets a 0–100 **Value** score that explains itself: hover a score to see the math, and tune the weights to match how you draft.
 
 ## Features
 
 - **Players** — sortable, filterable table with Value, grades, PPG and a per-season trend sparkline. Toggle between the last completed season and the current season-to-date, and between Half-PPR / PPR / Standard scoring.
+- **Trending** — who the league is adding right now, straight from Sleeper's waiver-wire trend data.
 - **Weights** — split-bar controls and presets for how Player, Opportunity and Team grades combine, with a live worked example and the biggest movers vs. defaults.
 - **Rookies** — the current rookie class and second-year players, straight from Sleeper.
 - **Player pages** — season log, PPG history and a full score breakdown.

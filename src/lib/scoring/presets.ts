@@ -1,6 +1,6 @@
 import type { ScoringWeights } from '@/types/scoring'
 import { DEFAULT_WEIGHTS } from '@/types/scoring'
-import { normalizeGradeWeights, normalizeRecency } from './value'
+import { normalizeGradeWeights, normalizeOpportunityWeights, normalizePlayerWeights, normalizeRecency } from './value'
 
 export interface WeightPreset {
   key: string
@@ -58,12 +58,23 @@ export function isDefaultWeights(weights: ScoringWeights): boolean {
   const dg = normalizeGradeWeights(DEFAULT_WEIGHTS)
   const r = normalizeRecency(weights)
   const dr = normalizeRecency(DEFAULT_WEIGHTS)
+  const p = normalizePlayerWeights(weights)
+  const dp = normalizePlayerWeights(DEFAULT_WEIGHTS)
+  const o = normalizeOpportunityWeights(weights)
+  const do_ = normalizeOpportunityWeights(DEFAULT_WEIGHTS)
   return (
     pctEq(g.player, dg.player) &&
     pctEq(g.opportunity, dg.opportunity) &&
     pctEq(g.team, dg.team) &&
     pctEq(r[0], dr[0]) &&
     pctEq(r[1], dr[1]) &&
-    pctEq(r[2], dr[2])
+    pctEq(r[2], dr[2]) &&
+    pctEq(p[0], dp[0]) &&
+    pctEq(p[1], dp[1]) &&
+    pctEq(p[2], dp[2]) &&
+    pctEq(o[0], do_[0]) &&
+    pctEq(o[1], do_[1]) &&
+    pctEq(o[2], do_[2]) &&
+    pctEq(o[3], do_[3])
   )
 }

@@ -12,6 +12,10 @@ export interface PlayerGradeBreakdown {
   ageCurveAdj: number         // points added/removed for age (≤ 0)
   ageAdjustedPct: number      // ppgPercentile + ageCurveAdj, clamped 0–100 ("Age-adjusted production")
   durabilityPct: number       // % of team games played, 0–100
+  // Normalized sub-weights actually applied (sum to 1), for display
+  ppgWeight: number
+  ageWeight: number
+  durabilityWeight: number
 }
 
 export interface OpportunityGradeBreakdown {
@@ -19,6 +23,11 @@ export interface OpportunityGradeBreakdown {
   targetSharePct: number      // target volume percentile, 0–100
   touchSharePct: number       // touch volume percentile, 0–100
   roleSteadiness: number      // games-played percentile, 0–100
+  // Normalized sub-weights actually applied (sum to 1), for display
+  depthChartWeight: number
+  targetShareWeight: number
+  touchShareWeight: number
+  roleSteadinessWeight: number
 }
 
 /** One team-context input, e.g. "Pass Att/G". */
@@ -80,6 +89,15 @@ export interface ScoringWeights {
   recencyY1: number           // selected season, default 0.50
   recencyY2: number           // default 0.30
   recencyY3: number           // default 0.20
+  // Player Grade sub-weights (normalized before use)
+  playerWPpg: number          // PPG percentile, default 0.55
+  playerWAge: number          // age-adjusted production, default 0.20
+  playerWDurability: number   // durability, default 0.25
+  // Opportunity Grade sub-weights (normalized before use)
+  oppWDepthChart: number      // depth chart, default 0.35
+  oppWTargetShare: number     // target volume, default 0.25
+  oppWTouchShare: number      // touch volume, default 0.25
+  oppWRoleSteadiness: number  // games played, default 0.15
 }
 
 export const DEFAULT_WEIGHTS: ScoringWeights = {
@@ -89,6 +107,13 @@ export const DEFAULT_WEIGHTS: ScoringWeights = {
   recencyY1: 0.50,
   recencyY2: 0.30,
   recencyY3: 0.20,
+  playerWPpg: 0.55,
+  playerWAge: 0.20,
+  playerWDurability: 0.25,
+  oppWDepthChart: 0.35,
+  oppWTargetShare: 0.25,
+  oppWTouchShare: 0.25,
+  oppWRoleSteadiness: 0.15,
 }
 
 // ─── Computed Player Row (used in the tables) ────────────────────────────────

@@ -14,6 +14,7 @@ import { PositionFilter } from '@/components/PositionFilter'
 import { SeasonToggle } from '@/components/SeasonToggle'
 import { ScoringFormatToggle } from '@/components/ScoringFormatToggle'
 import { WeightsDrawer } from '@/components/WeightsDrawer'
+import { TrendingAddsStrip } from '@/components/TrendingAdds'
 import { useWatchlistStore } from '@/store/watchlist'
 import { useWeightsStore } from '@/store/weights'
 import { isDefaultWeights } from '@/lib/scoring/presets'
@@ -27,7 +28,7 @@ export function PlayersPage() {
   const { weights, reset: resetWeights } = useWeightsStore()
 
   const [positions, setPositions] = useState<FantasyPosition[]>([])
-  const [includeRookies, setIncludeRookies] = useState(false)
+  const [includeRookies, setIncludeRookies] = useState(true)
   const [weightsOpen, setWeightsOpen] = useState(false)
   const [sorting, setSorting] = useState<SortingState>([{ id: 'valueScore', desc: true }])
   const [nameFilter, setNameFilter] = useState('')
@@ -104,6 +105,8 @@ export function PlayersPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 py-6">
       <WeightsDrawer open={weightsOpen} onClose={() => setWeightsOpen(false)} />
+
+      <TrendingAddsStrip />
 
       {/* Header */}
       <div className="flex flex-wrap items-center gap-3 mb-2">

@@ -3,6 +3,7 @@ import type {
   SleeperPlayersMap,
   SleeperSeasonStats,
   NFLState,
+  TrendingPlayer,
 } from '@/types/sleeper'
 import { primaryPosition } from '@/lib/positions'
 
@@ -66,6 +67,19 @@ export async function fetchNFLState(): Promise<NFLState> {
  */
 export async function fetchSeasonStats(season: string): Promise<SleeperSeasonStats> {
   return get<SleeperSeasonStats>(`${BASE}/stats/nfl/regular/${season}`)
+}
+
+// ─── Trending players ────────────────────────────────────────────────────────
+
+/** Players being added (or dropped) across Sleeper leagues right now. */
+export async function fetchTrendingPlayers(
+  type: 'add' | 'drop',
+  lookbackHours = 24,
+  limit = 25,
+): Promise<TrendingPlayer[]> {
+  return get<TrendingPlayer[]>(
+    `${BASE}/players/nfl/trending/${type}?lookback_hours=${lookbackHours}&limit=${limit}`,
+  )
 }
 
 // ─── Player image URL ────────────────────────────────────────────────────────

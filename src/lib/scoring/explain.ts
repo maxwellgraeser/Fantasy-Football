@@ -5,7 +5,6 @@ import { SCORING_FORMAT_LABELS } from './format'
 
 export interface GradePart {
   label: string
-  weight: number   // share of the grade, 0–1
   detail: string
 }
 
@@ -21,19 +20,19 @@ export const GRADE_EXPLANATIONS: Record<GradeKey, GradeExplanation> = {
     title: 'Player Grade',
     short: 'Production vs. same-position players: fantasy PPG, age-adjusted production, durability.',
     parts: [
-      { label: 'PPG percentile', weight: 0.55, detail: 'Recency-weighted fantasy PPG over the last 3 seasons, as a percentile vs. the position.' },
-      { label: 'Age-adjusted production', weight: 0.20, detail: 'PPG percentile minus an age-curve penalty for players past (or well before) their position’s peak.' },
-      { label: 'Durability', weight: 0.25, detail: 'Share of team games played, averaged over recent seasons.' },
+      { label: 'PPG percentile', detail: 'Recency-weighted fantasy PPG over the last 3 seasons, as a percentile vs. the position.' },
+      { label: 'Age-adjusted production', detail: 'PPG percentile minus an age-curve penalty for players past (or well before) their position’s peak.' },
+      { label: 'Durability', detail: 'Share of team games played, averaged over recent seasons.' },
     ],
   },
   opportunity: {
     title: 'Opportunity Grade',
     short: 'Role and volume: depth chart, target volume, touch volume, games played.',
     parts: [
-      { label: 'Depth chart', weight: 0.35, detail: 'Starter = 90, backup = 55, third string = 25.' },
-      { label: 'Target volume', weight: 0.25, detail: 'Targets in the selected season, percentile vs. the position.' },
-      { label: 'Touch volume', weight: 0.25, detail: 'Carries + receptions, percentile vs. the position.' },
-      { label: 'Games played', weight: 0.15, detail: 'Games played, percentile vs. the position.' },
+      { label: 'Depth chart', detail: 'Starter = 90, backup = 55, third string = 25.' },
+      { label: 'Target volume', detail: 'Targets in the selected season, percentile vs. the position.' },
+      { label: 'Touch volume', detail: 'Carries + receptions, percentile vs. the position.' },
+      { label: 'Games played', detail: 'Games played, percentile vs. the position.' },
     ],
   },
   team: {

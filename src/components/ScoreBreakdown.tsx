@@ -90,19 +90,19 @@ export function ScoreBreakdown({ scores }: Props) {
 
       <div className="space-y-2">
         <Section contribution={findContribution(contributions, 'player')}>
-          <ScoreBar value={Math.round(pb.ppgPercentile)} label={`${ppgPart.label} · ${pct(ppgPart.weight)}`} color={BAR_COLOR.player} />
-          <ScoreBar value={Math.round(pb.ageAdjustedPct)} label={`${ageAdjPart.label} · ${pct(ageAdjPart.weight)}`} color={BAR_COLOR.player} />
-          <ScoreBar value={Math.round(pb.durabilityPct)} label={`${durabilityPart.label} · ${pct(durabilityPart.weight)}`} color={BAR_COLOR.player} />
+          <ScoreBar value={Math.round(pb.ppgPercentile)} label={`${ppgPart.label} · ${pct(pb.ppgWeight)}`} color={BAR_COLOR.player} />
+          <ScoreBar value={Math.round(pb.ageAdjustedPct)} label={`${ageAdjPart.label} · ${pct(pb.ageWeight)}`} color={BAR_COLOR.player} />
+          <ScoreBar value={Math.round(pb.durabilityPct)} label={`${durabilityPart.label} · ${pct(pb.durabilityWeight)}`} color={BAR_COLOR.player} />
           <div className="pt-1 text-xs text-slate-500">Recency-weighted PPG: {pb.recentPpg.toFixed(1)}</div>
         </Section>
 
         <Section contribution={findContribution(contributions, 'opportunity')}>
           {ob && (
             <>
-              <ScoreBar value={Math.round(ob.depthChartScore)} label={`${depthPart.label} · ${pct(depthPart.weight)}`} color={BAR_COLOR.opportunity} />
-              <ScoreBar value={Math.round(ob.targetSharePct)} label={`${targetPart.label} · ${pct(targetPart.weight)}`} color={BAR_COLOR.opportunity} />
-              <ScoreBar value={Math.round(ob.touchSharePct)} label={`${touchPart.label} · ${pct(touchPart.weight)}`} color={BAR_COLOR.opportunity} />
-              <ScoreBar value={Math.round(ob.roleSteadiness)} label={`${gamesPart.label} · ${pct(gamesPart.weight)}`} color={BAR_COLOR.opportunity} />
+              <ScoreBar value={Math.round(ob.depthChartScore)} label={`${depthPart.label} · ${pct(ob.depthChartWeight)}`} color={BAR_COLOR.opportunity} />
+              <ScoreBar value={Math.round(ob.targetSharePct)} label={`${targetPart.label} · ${pct(ob.targetShareWeight)}`} color={BAR_COLOR.opportunity} />
+              <ScoreBar value={Math.round(ob.touchSharePct)} label={`${touchPart.label} · ${pct(ob.touchShareWeight)}`} color={BAR_COLOR.opportunity} />
+              <ScoreBar value={Math.round(ob.roleSteadiness)} label={`${gamesPart.label} · ${pct(ob.roleSteadinessWeight)}`} color={BAR_COLOR.opportunity} />
             </>
           )}
         </Section>

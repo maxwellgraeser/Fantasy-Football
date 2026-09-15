@@ -1,7 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useWeightsStore } from '@/store/weights'
 import { useValueScores } from '@/hooks/useValueScores'
-import { computeValue, normalizeGradeWeights, normalizeRecency, type GradeSet } from '@/lib/scoring/value'
+import {
+  computeValue,
+  normalizeGradeWeights,
+  normalizeOpportunityWeights,
+  normalizePlayerWeights,
+  normalizeRecency,
+  type GradeSet,
+} from '@/lib/scoring/value'
 import { WEIGHT_PRESETS, matchesPreset } from '@/lib/scoring/presets'
 import { GRADE_EXPLANATIONS, TEAM_CONTEXT_BY_POSITION, ROOKIE_NOTE, DEF_NOTE } from '@/lib/scoring/explain'
 import { DEFAULT_WEIGHTS, type PlayerRow, type ScoringWeights } from '@/types/scoring'
@@ -21,6 +28,19 @@ const GRADE_SEGMENTS: SplitBarSegment[] = [
 
 const RECENCY_COLORS = ['bg-violet-500', 'bg-sky-500', 'bg-amber-500']
 
+const PLAYER_SUB_SEGMENTS: SplitBarSegment[] = [
+  { key: 'playerWPpg', label: 'PPG percentile', color: 'bg-violet-500' },
+  { key: 'playerWAge', label: 'Age-adjusted', color: 'bg-sky-500' },
+  { key: 'playerWDurability', label: 'Durability', color: 'bg-amber-500' },
+]
+
+const OPPORTUNITY_SUB_SEGMENTS: SplitBarSegment[] = [
+  { key: 'oppWDepthChart', label: 'Depth chart', color: 'bg-violet-500' },
+  { key: 'oppWTargetShare', label: 'Target volume', color: 'bg-sky-500' },
+  { key: 'oppWTouchShare', label: 'Touch volume', color: 'bg-amber-500' },
+  { key: 'oppWRoleSteadiness', label: 'Games played', color: 'bg-rose-500' },
+]
+
 function weightsEqual(a: ScoringWeights, b: ScoringWeights): boolean {
   return (
     a.wPlayer === b.wPlayer &&
@@ -28,7 +48,14 @@ function weightsEqual(a: ScoringWeights, b: ScoringWeights): boolean {
     a.wTeam === b.wTeam &&
     a.recencyY1 === b.recencyY1 &&
     a.recencyY2 === b.recencyY2 &&
-    a.recencyY3 === b.recencyY3
+    a.recencyY3 === b.recencyY3 &&
+    a.playerWPpg === b.playerWPpg &&
+    a.playerWAge === b.playerWAge &&
+    a.playerWDurability === b.playerWDurability &&
+    a.oppWDepthChart === b.oppWDepthChart &&
+    a.oppWTargetShare === b.oppWTargetShare &&
+    a.oppWTouchShare === b.oppWTouchShare &&
+    a.oppWRoleSteadiness === b.oppWRoleSteadiness
   )
 }
 
@@ -132,6 +159,40 @@ export function WeightsDrawer({ open, onClose }: Props) {
     commitDraft({ ...draft, recencyY1: pcts[0] / 100, recencyY2: pcts[1] / 100, recencyY3: pcts[2] / 100 })
   }
 
+  // ── Player Grade sub-weights split bar ───────────────────────────────────
+  const playerNorm = normalizePlayerWeights(draft)
+  const playerValues = toPercents(playerNorm)
+
+  function onPlayerChange(pcts: number[]) {
+    setDraft((prev) => ({ ...prev, playerWPpg: pcts[0] / 100, playerWAge: pcts[1] / 100, playerWDurability: pcts[2] / 100 }))
+  }
+  function onPlayerCommit(pcts: number[]) {
+    commitDraft({ ...draft, playerWPpg: pcts[0] / 100, playerWAge: pcts[1] / 100, playerWDurability: pcts[2] / 100 })
+  }
+
+  // ── Opportunity Grade sub-weights split bar ──────────────────────────────
+  const oppNorm = normalizeOpportunityWeights(draft)
+  const oppValues = toPercents(oppNorm)
+
+  function onOppChange(pcts: number[]) {
+    setDraft((prev) => ({
+      ...prev,
+      oppWDepthChart: pcts[0] / 100,
+      oppWTargetShare: pcts[1] / 100,
+      oppWTouchShare: pcts[2] / 100,
+      oppWRoleSteadiness: pcts[3] / 100,
+    }))
+  }
+  function onOppCommit(pcts: number[]) {
+    commitDraft({
+      ...draft,
+      oppWDepthChart: pcts[0] / 100,
+      oppWTargetShare: pcts[1] / 100,
+      oppWTouchShare: pcts[2] / 100,
+      oppWRoleSteadiness: pcts[3] / 100,
+    })
+  }
+
   // ── Live worked example ──────────────────────────────────────────────────
   const examplePool = useMemo(() => rows.filter((r) => r.position !== 'DEF').slice(0, 50), [rows])
   const [exampleId, setExampleId] = useState<string | null>(null)
@@ -222,6 +283,18 @@ export function WeightsDrawer({ open, onClose }: Props) {
             <SplitBar segments={GRADE_SEGMENTS} values={gradeValues} onChange={onGradeChange} onCommit={onGradeCommit} />
           </div>
 
+          {/* Player Grade sub-weights */}
+          <div>
+            <p className="text-xs uppercase tracking-widest text-slate-500 mb-3">Player Grade Weights</p>
+            <SplitBar segments={PLAYER_SUB_SEGMENTS} values={playerValues} onChange={onPlayerChange} onCommit={onPlayerCommit} />
+          </div>
+
+          {/* Opportunity Grade sub-weights */}
+          <div>
+            <p className="text-xs uppercase tracking-widest text-slate-500 mb-3">Opportunity Grade Weights</p>
+            <SplitBar segments={OPPORTUNITY_SUB_SEGMENTS} values={oppValues} onChange={onOppChange} onCommit={onOppCommit} />
+          </div>
+
           {/* Live worked example */}
           <div>
             <div className="flex items-center justify-between mb-2 gap-2">
@@ -307,9 +380,9 @@ export function WeightsDrawer({ open, onClose }: Props) {
               <div>
                 <p className="text-slate-300 font-medium">{GRADE_EXPLANATIONS.player.title}</p>
                 <ul className="mt-1 space-y-0.5 list-disc list-inside">
-                  {GRADE_EXPLANATIONS.player.parts.map((p) => (
+                  {GRADE_EXPLANATIONS.player.parts.map((p, i) => (
                     <li key={p.label}>
-                      <span className="text-slate-300">{p.label}</span> ({Math.round(p.weight * 100)}%) — {p.detail}
+                      <span className="text-slate-300">{p.label}</span> ({playerValues[i]}%) — {p.detail}
                     </li>
                   ))}
                 </ul>
@@ -317,9 +390,9 @@ export function WeightsDrawer({ open, onClose }: Props) {
               <div>
                 <p className="text-slate-300 font-medium">{GRADE_EXPLANATIONS.opportunity.title}</p>
                 <ul className="mt-1 space-y-0.5 list-disc list-inside">
-                  {GRADE_EXPLANATIONS.opportunity.parts.map((p) => (
+                  {GRADE_EXPLANATIONS.opportunity.parts.map((p, i) => (
                     <li key={p.label}>
-                      <span className="text-slate-300">{p.label}</span> ({Math.round(p.weight * 100)}%) — {p.detail}
+                      <span className="text-slate-300">{p.label}</span> ({oppValues[i]}%) — {p.detail}
                     </li>
                   ))}
                 </ul>

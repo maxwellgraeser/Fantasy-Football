@@ -1,6 +1,6 @@
 import type { FantasyPosition, SleeperPlayer } from '@/types/sleeper'
 
-/** Positions GridironIQ scores. */
+/** Positions Min Max Fantasy scores. */
 export const SCORED_POSITIONS: FantasyPosition[] = ['QB', 'RB', 'WR', 'TE', 'DEF']
 
 export function primaryPosition(player: Pick<SleeperPlayer, 'fantasy_positions'>): FantasyPosition | null {

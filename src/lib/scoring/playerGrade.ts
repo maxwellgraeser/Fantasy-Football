@@ -47,11 +47,15 @@ export function durabilityScore(records: SeasonRecord[], seasonGames: Record<str
   return vals.reduce((a, b) => a + b, 0) / vals.length
 }
 
+const DEFAULT_PLAYER_WEIGHTS: [number, number, number] = [0.55, 0.20, 0.25]
+
 export interface PlayerGradeOptions {
   /** Normalized recency weights for [selected season, -1, -2]. */
   recency: [number, number, number]
   format: ScoringFormat
   seasonGames: Record<string, number>
+  /** Normalized [ppgPercentile, ageAdjusted, durability] weights. Defaults to 55/20/25. */
+  weights?: [number, number, number]
 }
 
 /**
@@ -65,9 +69,10 @@ export function computePlayerGrade(
   player: SleeperPlayer,
   records: SeasonRecord[],
   peerPpgs: number[],
-  { recency, format, seasonGames }: PlayerGradeOptions,
+  { recency, format, seasonGames, weights }: PlayerGradeOptions,
 ): { grade: number; breakdown: PlayerGradeBreakdown; weightedPpg: number } {
   const pos = (player.fantasy_positions?.[0] ?? 'WR') as FantasyPosition
+  const [wPpg, wAge, wDurability] = weights ?? DEFAULT_PLAYER_WEIGHTS
 
   const ppgs = records.map((r) => computePpg(r.stats, format))
   const weightedPpg = weightedMean(
@@ -86,6 +91,9 @@ export function computePlayerGrade(
       ageCurveAdj: 0,
       ageAdjustedPct: ppgPercentile,
       durabilityPct: durability,
+      ppgWeight: 1,
+      ageWeight: 0,
+      durabilityWeight: 0,
     }
     return { grade, breakdown, weightedPpg }
   }
@@ -99,13 +107,16 @@ export function computePlayerGrade(
     ageCurveAdj: ageCurve,
     ageAdjustedPct,
     durabilityPct: durability,
+    ppgWeight: wPpg,
+    ageWeight: wAge,
+    durabilityWeight: wDurability,
   }
 
   const grade = clamp(Math.round(
     weightedMean([
-      { value: ppgPercentile,  weight: 0.55 },
-      { value: ageAdjustedPct, weight: 0.20 },
-      { value: durability,     weight: 0.25 },
+      { value: ppgPercentile,  weight: wPpg },
+      { value: ageAdjustedPct, weight: wAge },
+      { value: durability,     weight: wDurability },
     ]),
   ))
 

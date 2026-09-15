@@ -19,7 +19,7 @@ import { formatHeight, playerName, primaryPosition } from '@/lib/positions'
 import { computePlayerGrade, computePpg, FULL_SEASON_GAMES, type SeasonRecord } from './playerGrade'
 import { computeOpportunityGrade } from './opportunityGrade'
 import { computeAllTeamGrades, seasonGamesPlayed } from './teamGrade'
-import { computeValue, normalizeRecency } from './value'
+import { computeValue, normalizeOpportunityWeights, normalizePlayerWeights, normalizeRecency } from './value'
 import { isEligiblePlayer } from './eligibility'
 
 const SEASONS_FOR_GRADE = 3
@@ -33,6 +33,10 @@ export interface SeasonStatsEntry {
 
 export interface GradeOptions {
   recency: Pick<ScoringWeights, 'recencyY1' | 'recencyY2' | 'recencyY3'>
+  /** Player Grade sub-weights. Defaults to the shipped 55/20/25 split. */
+  playerWeights?: Pick<ScoringWeights, 'playerWPpg' | 'playerWAge' | 'playerWDurability'>
+  /** Opportunity Grade sub-weights. Defaults to the shipped 35/25/25/15 split. */
+  opportunityWeights?: Pick<ScoringWeights, 'oppWDepthChart' | 'oppWTargetShare' | 'oppWTouchShare' | 'oppWRoleSteadiness'>
   format: ScoringFormat
   /** Season still under way (flags SeasonLine.inProgress), or null. */
   inProgressSeason: string | null
@@ -86,6 +90,9 @@ export function buildGradedRows(
   const [selected, previous] = seasonStatsList
   const { format } = opts
   const recency = normalizeRecency(opts.recency)
+  const playerW = normalizePlayerWeights(opts.playerWeights ?? DEFAULT_WEIGHTS)
+  const [oppWDepthChart, oppWTargetShare, oppWTouchShare, oppWRoleSteadiness] =
+    normalizeOpportunityWeights(opts.opportunityWeights ?? DEFAULT_WEIGHTS)
 
   const seasonGames: Record<string, number> = {}
   for (const { season, stats } of seasonStatsList) {
@@ -138,7 +145,7 @@ export function buildGradedRows(
       player,
       records,
       peerPpgs[pos],
-      { recency, format, seasonGames },
+      { recency, format, seasonGames, weights: playerW },
     )
 
     let opportunityGrade: number | null = null
@@ -148,7 +155,12 @@ export function buildGradedRows(
 
     // DEF is scored on Player grade only — opportunity/team don't apply.
     if (pos !== 'DEF') {
-      const opp = computeOpportunityGrade(player, records[0]?.stats, positionStats[pos])
+      const opp = computeOpportunityGrade(player, records[0]?.stats, positionStats[pos], {
+        depthChart: oppWDepthChart,
+        targetShare: oppWTargetShare,
+        touchShare: oppWTouchShare,
+        roleSteadiness: oppWRoleSteadiness,
+      })
       opportunityGrade = opp.grade
       opportunityBreakdown = opp.breakdown
 
@@ -225,11 +237,13 @@ export function buildPlayerRows(
   players: SleeperPlayersMap,
   seasonStatsList: SeasonStatsEntry[],
   weights: ScoringWeights = DEFAULT_WEIGHTS,
-  opts: Partial<Omit<GradeOptions, 'recency'>> = {},
+  opts: Partial<Omit<GradeOptions, 'recency' | 'playerWeights' | 'opportunityWeights'>> = {},
 ): PlayerRow[] {
   const latestSeason = opts.latestSeason ?? seasonStatsList[0]?.season ?? String(new Date().getFullYear())
   const graded = buildGradedRows(players, seasonStatsList, {
     recency: weights,
+    playerWeights: weights,
+    opportunityWeights: weights,
     format: opts.format ?? 'half_ppr',
     inProgressSeason: opts.inProgressSeason ?? null,
     latestSeason,

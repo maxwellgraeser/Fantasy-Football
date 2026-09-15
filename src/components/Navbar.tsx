@@ -5,6 +5,7 @@ import { positionBadgeClass } from '@/lib/positions'
 
 const tabs = [
   { path: '/players', label: 'Players' },
+  { path: '/trending', label: 'Trending' },
   { path: '/rookies', label: 'Rookies' },
   { path: '/watchlist', label: 'Watchlist' },
 ]
@@ -115,7 +116,7 @@ export function Navbar() {
         <div className={`${mobileSearchOpen ? 'hidden' : 'flex'} sm:flex items-center gap-3 sm:gap-6 min-w-0`}>
           <div className="flex items-center gap-2 shrink-0">
             <span className="text-violet-400 text-lg">🏈</span>
-            <span className="font-bold text-sm text-white tracking-tight">GridironIQ</span>
+            <span className="font-bold text-sm text-white tracking-tight">Min Max Fantasy</span>
           </div>
 
           {/* Desktop tabs */}

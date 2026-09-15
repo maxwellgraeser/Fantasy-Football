@@ -12,6 +12,17 @@ function depthChartScore(order: number | null): number {
   return 10
 }
 
+export interface OpportunityGradeWeights {
+  depthChart: number
+  targetShare: number
+  touchShare: number
+  roleSteadiness: number
+}
+
+const DEFAULT_OPPORTUNITY_WEIGHTS: OpportunityGradeWeights = {
+  depthChart: 0.35, targetShare: 0.25, touchShare: 0.25, roleSteadiness: 0.15,
+}
+
 /**
  * OpportunityGrade: combines depth-chart status, target/touch share trends.
  * `allStats` is all players at the same position, used for percentile normalization.
@@ -20,6 +31,7 @@ export function computeOpportunityGrade(
   player: SleeperPlayer,
   stats: SleeperPlayerStats | undefined,
   allPositionStats: SleeperPlayerStats[],   // for percentile calcs
+  weights: OpportunityGradeWeights = DEFAULT_OPPORTUNITY_WEIGHTS,
 ): { grade: number; breakdown: OpportunityGradeBreakdown } {
   const dcScore = depthChartScore(player.depth_chart_order)
 
@@ -39,14 +51,23 @@ export function computeOpportunityGrade(
   const roleSteadiness = percentileRank(gp, allGp)
 
   const grade = clamp(Math.round(
-    dcScore * 0.35
-    + targetSharePct * 0.25
-    + touchSharePct * 0.25
-    + roleSteadiness * 0.15,
+    dcScore * weights.depthChart
+    + targetSharePct * weights.targetShare
+    + touchSharePct * weights.touchShare
+    + roleSteadiness * weights.roleSteadiness,
   ))
 
   return {
     grade,
-    breakdown: { depthChartScore: dcScore, targetSharePct, touchSharePct, roleSteadiness },
+    breakdown: {
+      depthChartScore: dcScore,
+      targetSharePct,
+      touchSharePct,
+      roleSteadiness,
+      depthChartWeight: weights.depthChart,
+      targetShareWeight: weights.targetShare,
+      touchShareWeight: weights.touchShare,
+      roleSteadinessWeight: weights.roleSteadiness,
+    },
   }
 }

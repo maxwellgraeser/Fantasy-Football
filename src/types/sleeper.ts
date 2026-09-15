@@ -90,6 +90,13 @@ export type SleeperSeasonStats = Record<string, SleeperPlayerStats>
 
 // ─── NFL State ───────────────────────────────────────────────────────────────
 
+// ─── Trending players (from /players/nfl/trending/{add|drop}) ──────────────
+
+export interface TrendingPlayer {
+  player_id: string
+  count: number   // number of leagues that added/dropped this player in the lookback window
+}
+
 export interface NFLState {
   week: number
   season_type: string

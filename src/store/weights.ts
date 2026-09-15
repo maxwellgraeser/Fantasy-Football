@@ -18,6 +18,14 @@ export const useWeightsStore = create<WeightsState>()(
         })),
       reset: () => set({ weights: { ...DEFAULT_WEIGHTS } }),
     }),
-    { name: 'ff-scoring-weights' },
+    {
+      name: 'ff-scoring-weights',
+      // Backfill fields added after a user's weights were persisted (e.g. an older
+      // localStorage payload missing the Player/Opportunity sub-weights).
+      merge: (persisted, current) => ({
+        ...current,
+        weights: { ...DEFAULT_WEIGHTS, ...(persisted as Partial<WeightsState>)?.weights },
+      }),
+    },
   ),
 )

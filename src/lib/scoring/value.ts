@@ -53,6 +53,26 @@ export function normalizeRecency(
   return [vals[0] / sum, vals[1] / sum, vals[2] / sum]
 }
 
+/** Normalize Player Grade sub-weights [ppgPercentile, ageAdjusted, durability] (all-zero → defaults). */
+export function normalizePlayerWeights(
+  w: Pick<ScoringWeights, 'playerWPpg' | 'playerWAge' | 'playerWDurability'>,
+): [number, number, number] {
+  const vals = [w.playerWPpg, w.playerWAge, w.playerWDurability].map((v) => Math.max(0, v || 0))
+  const sum = vals[0] + vals[1] + vals[2]
+  if (sum === 0) return normalizePlayerWeights(DEFAULT_WEIGHTS)
+  return [vals[0] / sum, vals[1] / sum, vals[2] / sum]
+}
+
+/** Normalize Opportunity Grade sub-weights [depthChart, targetShare, touchShare, roleSteadiness] (all-zero → defaults). */
+export function normalizeOpportunityWeights(
+  w: Pick<ScoringWeights, 'oppWDepthChart' | 'oppWTargetShare' | 'oppWTouchShare' | 'oppWRoleSteadiness'>,
+): [number, number, number, number] {
+  const vals = [w.oppWDepthChart, w.oppWTargetShare, w.oppWTouchShare, w.oppWRoleSteadiness].map((v) => Math.max(0, v || 0))
+  const sum = vals.reduce((a, b) => a + b, 0)
+  if (sum === 0) return normalizeOpportunityWeights(DEFAULT_WEIGHTS)
+  return [vals[0] / sum, vals[1] / sum, vals[2] / sum, vals[3] / sum]
+}
+
 /**
  * Composite Value score from grades and weights.
  * Grades that are not applicable (null) are dropped and the remaining weights
