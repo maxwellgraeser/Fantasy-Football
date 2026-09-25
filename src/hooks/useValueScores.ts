@@ -8,8 +8,8 @@ export interface ValueScoresState {
   isLoading: boolean
   error: Error | null
   season: SeasonContext
-  /** Games played so far in the selected season (17 once complete). */
-  gamesInSelectedSeason: number
+  /** Games played so far in the selected season (17 once complete); null while its stats load. */
+  gamesInSelectedSeason: number | null
   scoringFormat: ScoringFormat
   /** True while a weights/format change is being applied in the background. */
   isRecomputing: boolean

@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { flushSync } from 'react-dom'
 import { useValueScores } from '@/hooks/useValueScores'
 import { positionBadgeClass } from '@/lib/positions'
 
@@ -35,6 +36,11 @@ export function Navbar() {
   const [activeIndex, setActiveIndex] = useState(-1)
   const [prevQuery, setPrevQuery] = useState(debouncedQuery)
   const inputRef = useRef<HTMLInputElement>(null)
+  // Pending "close results" timer from the last blur. Cleared on refocus so a quick
+  // blur → focus (e.g. picking a result, then typing again) doesn't hide new results.
+  const blurTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+
+  useEffect(() => () => clearTimeout(blurTimer.current), [])
 
   // Debounce the query so we don't re-scan the index on every keystroke.
   useEffect(() => {
@@ -87,6 +93,13 @@ export function Navbar() {
     setActiveIndex(-1)
     setMobileSearchOpen(false)
     inputRef.current?.blur()
+  }
+
+  function openMobileSearch() {
+    // Render the input synchronously so it can be focused inside the tap gesture
+    // (mobile browsers only raise the keyboard for focus within a user gesture).
+    flushSync(() => setMobileSearchOpen(true))
+    inputRef.current?.focus()
   }
 
   function handleKeyDown(e: KeyboardEvent<HTMLInputElement>) {
@@ -175,7 +188,7 @@ export function Navbar() {
 
         {/* Mobile search icon (collapsed state) */}
         <button
-          onClick={() => setMobileSearchOpen(true)}
+          onClick={openMobileSearch}
           aria-label="Search players"
           className={`${mobileSearchOpen ? 'hidden' : 'flex'} sm:hidden p-1.5 text-lg text-slate-300 hover:text-white rounded shrink-0 transition-colors`}
         >
@@ -195,8 +208,13 @@ export function Navbar() {
             placeholder="Search players…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setTimeout(() => setFocused(false), 150)}
+            onFocus={() => {
+              clearTimeout(blurTimer.current)
+              setFocused(true)
+            }}
+            onBlur={() => {
+              blurTimer.current = setTimeout(() => setFocused(false), 150)
+            }}
             onKeyDown={handleKeyDown}
             className="w-full min-w-0 bg-slate-800/60 border border-slate-700 rounded-lg
               px-3 py-1.5 text-sm text-slate-200 placeholder-slate-500

@@ -27,3 +27,6 @@ dist-ssr
 .superpowers/
 .claude/settings.local.json
 *.local.test.ts
+
+# E2E screenshots
+e2e/shots/
