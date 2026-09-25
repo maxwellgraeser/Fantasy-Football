@@ -107,3 +107,55 @@ export interface NFLState {
   league_season: string
   display_week: number
 }
+
+// ─── Users & leagues (from /user, /league) ──────────────────────────────────
+
+export interface SleeperUser {
+  user_id: string
+  username: string
+  display_name: string
+  avatar: string | null
+}
+
+export interface SleeperLeague {
+  league_id: string
+  name: string
+  season: string
+  status: 'pre_draft' | 'drafting' | 'in_season' | 'complete' | string
+  total_rosters: number
+  avatar: string | null
+  /** Slot per roster spot, e.g. ["QB","RB","RB","WR","WR","TE","FLEX","K","DEF","BN",...] */
+  roster_positions: string[]
+  scoring_settings: Record<string, number>
+}
+
+/** A member of a league (from /league/{id}/users). */
+export interface SleeperLeagueUser extends SleeperUser {
+  metadata?: { team_name?: string } | null
+}
+
+export interface SleeperRoster {
+  roster_id: number
+  owner_id: string | null
+  co_owners?: string[] | null
+  players: string[] | null
+  starters: string[] | null     // "0" marks an empty starting slot
+  reserve: string[] | null      // IR
+  taxi: string[] | null
+  settings: {
+    wins: number
+    losses: number
+    ties: number
+    fpts?: number
+    fpts_decimal?: number
+    fpts_against?: number
+    fpts_against_decimal?: number
+  }
+}
+
+export interface SleeperMatchup {
+  roster_id: number
+  matchup_id: number | null     // null = bye / no opponent this week
+  points: number | null
+  starters: string[] | null
+}

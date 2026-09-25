@@ -3,6 +3,9 @@ import type { FantasyPosition, SleeperPlayer } from '@/types/sleeper'
 /** Positions Min Max Fantasy scores. */
 export const SCORED_POSITIONS: FantasyPosition[] = ['QB', 'RB', 'WR', 'TE', 'DEF']
 
+/** Positions kept in the player cache so league rosters can show them (scored + K + IDP). */
+export const ROSTERABLE_POSITIONS: FantasyPosition[] = [...SCORED_POSITIONS, 'K', 'DL', 'LB', 'DB']
+
 export function primaryPosition(player: Pick<SleeperPlayer, 'fantasy_positions'>): FantasyPosition | null {
   const pos = player.fantasy_positions?.[0]
   return pos && SCORED_POSITIONS.includes(pos) ? pos : null
