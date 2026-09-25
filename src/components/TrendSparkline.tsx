@@ -9,6 +9,9 @@ interface Props {
 
 const PAD_Y = 3
 
+/** PPG at the precision it's displayed, so float noise between equal seasons can't draw a spike or a "−0.0" drop. */
+const round1 = (n: number) => Math.round(n * 10) / 10
+
 /** Lightweight inline-SVG sparkline (no recharts — this renders once per table row). */
 export function TrendSparkline({ data, width = 56, height = 24 }: Props) {
   if (!data || data.length === 0) {
@@ -36,20 +39,18 @@ export function TrendSparkline({ data, width = 56, height = 24 }: Props) {
     )
   }
 
-  const values = data.map((d) => d.ppg)
+  const values = data.map((d) => round1(d.ppg))
   const max = Math.max(...values)
   const min = Math.min(...values)
   const range = max - min || 1
   const stepX = width / (data.length - 1)
   const points = data.map((d, i) => ({
     x: i * stepX,
-    y: height - PAD_Y - ((d.ppg - min) / range) * (height - PAD_Y * 2),
+    y: height - PAD_Y - ((round1(d.ppg) - min) / range) * (height - PAD_Y * 2),
     d,
   }))
 
-  const last = data[data.length - 1]
-  const prev = data[data.length - 2]
-  const delta = last.ppg - prev.ppg
+  const delta = round1(values[values.length - 1] - values[values.length - 2])
   const rising = delta >= 0
   const color = rising ? '#34d399' : '#f87171'
 

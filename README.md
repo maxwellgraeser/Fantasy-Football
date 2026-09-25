@@ -36,9 +36,12 @@ Requires Node 20+.
 npm install
 npm run dev      # http://localhost:5173
 npm test         # Vitest unit tests
+npm run test:e2e # build + browser health check of every page and control (see e2e/)
 npm run lint
 npm run build    # type-check + production build
 ```
+
+The e2e check runs headless Chromium against synthetic Sleeper data (`e2e/fixtures.mjs`), so it needs no network. First time on a new machine: `npx playwright install chromium`.
 
 Data is fetched client-side from the public Sleeper API and cached in IndexedDB (players 24 h, stats 6 h). No API key needed.
 

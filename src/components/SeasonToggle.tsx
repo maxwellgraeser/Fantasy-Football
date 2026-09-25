@@ -2,7 +2,7 @@ import type { SeasonContext } from '@/hooks/useSeasonContext'
 
 interface Props {
   season: SeasonContext
-  gamesInSelectedSeason: number
+  gamesInSelectedSeason: number | null
 }
 
 /** Segmented control: last completed season vs. current season-to-date. */
@@ -35,7 +35,9 @@ export function SeasonToggle({ season, gamesInSelectedSeason }: Props) {
       </div>
       {isInProgress && (
         <span className="text-[11px] text-amber-400/80">
-          Week {week ?? '?'} · {gamesInSelectedSeason} game{gamesInSelectedSeason === 1 ? '' : 's'} played — scores are volatile
+          Week {week ?? '?'}
+          {gamesInSelectedSeason != null && ` · ${gamesInSelectedSeason} game${gamesInSelectedSeason === 1 ? '' : 's'} played`}
+          {' — scores are volatile'}
         </span>
       )}
     </div>

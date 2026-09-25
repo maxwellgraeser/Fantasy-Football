@@ -60,7 +60,7 @@ export function ScoresProvider({ children }: { children: ReactNode }) {
 
   const selectedStats = stats.data[0]
   const gamesInSelectedSeason = useMemo(
-    () => (selectedStats ? seasonGamesPlayed(selectedStats) : 0),
+    () => (selectedStats ? seasonGamesPlayed(selectedStats) : null),
     [selectedStats],
   )
 

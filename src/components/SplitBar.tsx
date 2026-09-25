@@ -129,12 +129,14 @@ export function SplitBar({ segments, values, onChange, onCommit, className = '' 
         {segments.map((seg, i) => (
           <div
             key={seg.key}
-            className={`h-full flex items-center justify-center text-[10px] font-medium
+            className={`h-full min-w-0 px-1 flex items-center justify-center gap-1 text-[10px] font-medium
               text-white/90 whitespace-nowrap overflow-hidden ${seg.color}`}
             style={{ width: `${values[i]}%` }}
             title={`${seg.label}: ${values[i]}%`}
           >
-            {values[i] >= 14 && <span>{seg.label} {values[i]}%</span>}
+            {/* Label shortens with an ellipsis in narrow segments; the percentage always stays whole. */}
+            {values[i] >= 14 && <span className="min-w-0 truncate">{seg.label}</span>}
+            {values[i] >= 6 && <span className="shrink-0">{values[i]}%</span>}
           </div>
         ))}
         {segments.slice(0, -1).map((_, h) => {
@@ -161,7 +163,8 @@ export function SplitBar({ segments, values, onChange, onCommit, className = '' 
         })}
       </div>
 
-      <div className="mt-2 grid gap-2" style={{ gridTemplateColumns: `repeat(${segments.length}, minmax(0, 1fr))` }}>
+      {/* Two columns keeps labels legible at drawer width (~420px, full width on mobile). */}
+      <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2">
         {segments.map((seg, i) => (
           <label key={seg.key} className="flex items-center gap-1.5 text-[11px] text-slate-400">
             <span className={`h-2 w-2 shrink-0 rounded-sm ${seg.color}`} aria-hidden="true" />
