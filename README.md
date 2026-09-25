@@ -4,6 +4,7 @@ A fantasy-football player-value dashboard built on live [Sleeper](https://docs.s
 
 ## Features
 
+- **My Leagues** — enter your Sleeper username to see every league you're in for the current season. Switch leagues from the dropdown to see your roster (starters, bench, IR, taxi), the best available free agents ranked by Value, standings and this week's matchups.
 - **Players** — sortable, filterable table with Value, grades, PPG and a per-season trend sparkline. Toggle between the last completed season and the current season-to-date, and between Half-PPR / PPR / Standard scoring.
 - **Trending** — who the league is adding right now, straight from Sleeper's waiver-wire trend data.
 - **Weights** — split-bar controls and presets for how Player, Opportunity and Team grades combine, with a live worked example and the biggest movers vs. defaults.
@@ -42,14 +43,22 @@ npm run build    # type-check + production build
 
 Data is fetched client-side from the public Sleeper API and cached in IndexedDB (players 24 h, stats 6 h). No API key needed.
 
+The connected Sleeper username is saved in the browser (localStorage). To pre-fill it for a build, set it in `.env.local` (git-ignored):
+
+```bash
+VITE_SLEEPER_USERNAME=your_sleeper_username
+```
+
+Sleeper's API is read-only: the app can show leagues, rosters and matchups but can't make roster moves.
+
 ## Project layout
 
 ```
 src/
   components/   UI building blocks, ScoresProvider (computes scores once for the app)
   hooks/        data hooks (players, stats, NFL state, season context, value scores)
-  lib/          Sleeper client, cache, season model, positions
+  lib/          Sleeper client, cache, season model, positions, league helpers
   lib/scoring/  grades, composite Value, explanations (+ tests)
-  pages/        Players, Player detail, Rookies, Watchlist
-  store/        zustand stores (weights, season mode, settings, watchlist)
+  pages/        My Leagues, Players, Player detail, Rookies, Watchlist
+  store/        zustand stores (account, weights, season mode, settings, watchlist)
 ```

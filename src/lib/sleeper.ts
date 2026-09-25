@@ -4,8 +4,13 @@ import type {
   SleeperSeasonStats,
   NFLState,
   TrendingPlayer,
+  SleeperUser,
+  SleeperLeague,
+  SleeperLeagueUser,
+  SleeperRoster,
+  SleeperMatchup,
 } from '@/types/sleeper'
-import { primaryPosition } from '@/lib/positions'
+import { ROSTERABLE_POSITIONS } from '@/lib/positions'
 
 const BASE = 'https://api.sleeper.app/v1'
 
@@ -22,11 +27,15 @@ export async function fetchAllPlayers(): Promise<SleeperPlayersMap> {
   return get<SleeperPlayersMap>(`${BASE}/players/nfl`)
 }
 
-/** Keep only scored positions (QB/RB/WR/TE/DEF) and the fields the app uses. */
+/**
+ * Keep only fantasy-rosterable positions and the fields the app uses. Kickers and IDP
+ * are kept so league rosters can name them; scoring still filters to scored positions.
+ */
 export function trimPlayers(all: SleeperPlayersMap): SleeperPlayersMap {
   const out: SleeperPlayersMap = {}
   for (const [id, p] of Object.entries(all)) {
-    if (!primaryPosition(p)) continue
+    const pos = p.fantasy_positions?.[0]
+    if (!pos || !ROSTERABLE_POSITIONS.includes(pos)) continue
     const trimmed: SleeperPlayer = {
       player_id: p.player_id,
       first_name: p.first_name,
@@ -80,6 +89,33 @@ export async function fetchTrendingPlayers(
   return get<TrendingPlayer[]>(
     `${BASE}/players/nfl/trending/${type}?lookback_hours=${lookbackHours}&limit=${limit}`,
   )
+}
+
+// ─── Users & leagues ─────────────────────────────────────────────────────────
+
+/** Looks up a Sleeper account by username (or user ID). Resolves null when none exists. */
+export async function fetchUser(usernameOrId: string): Promise<SleeperUser | null> {
+  return get<SleeperUser | null>(`${BASE}/user/${encodeURIComponent(usernameOrId.trim())}`)
+}
+
+export async function fetchUserLeagues(userId: string, season: string): Promise<SleeperLeague[]> {
+  return get<SleeperLeague[]>(`${BASE}/user/${userId}/leagues/nfl/${season}`)
+}
+
+export async function fetchLeagueUsers(leagueId: string): Promise<SleeperLeagueUser[]> {
+  return get<SleeperLeagueUser[]>(`${BASE}/league/${leagueId}/users`)
+}
+
+export async function fetchLeagueRosters(leagueId: string): Promise<SleeperRoster[]> {
+  return get<SleeperRoster[]>(`${BASE}/league/${leagueId}/rosters`)
+}
+
+export async function fetchLeagueMatchups(leagueId: string, week: number): Promise<SleeperMatchup[]> {
+  return get<SleeperMatchup[]>(`${BASE}/league/${leagueId}/matchups/${week}`)
+}
+
+export function avatarUrl(avatarId: string): string {
+  return `https://sleepercdn.com/avatars/thumbs/${avatarId}`
 }
 
 // ─── Player image URL ────────────────────────────────────────────────────────

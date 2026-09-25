@@ -8,6 +8,7 @@ const PlayersPage = lazy(() => import('@/pages/PlayersPage').then((m) => ({ defa
 const PlayerDetailPage = lazy(() => import('@/pages/PlayerDetailPage').then((m) => ({ default: m.PlayerDetailPage })))
 const RookiesPage = lazy(() => import('@/pages/RookiesPage').then((m) => ({ default: m.RookiesPage })))
 const TrendingPage = lazy(() => import('@/pages/TrendingPage').then((m) => ({ default: m.TrendingPage })))
+const LeaguesPage = lazy(() => import('@/pages/LeaguesPage').then((m) => ({ default: m.LeaguesPage })))
 const WatchlistPage = lazy(() => import('@/pages/WatchlistPage').then((m) => ({ default: m.WatchlistPage })))
 
 const queryClient = new QueryClient({
@@ -44,6 +45,7 @@ export default function App() {
                   <Route path="/player/:id" element={<PlayerDetailPage />} />
                   <Route path="/trending" element={<TrendingPage />} />
                   <Route path="/rookies" element={<RookiesPage />} />
+                  <Route path="/leagues" element={<LeaguesPage />} />
                   <Route path="/watchlist" element={<WatchlistPage />} />
                 </Routes>
               </Suspense>

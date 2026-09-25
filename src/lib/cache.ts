@@ -28,7 +28,7 @@ async function setCache<T>(key: string, data: T): Promise<void> {
 }
 
 // Version bump: bump this when the data schema changes to force cache invalidation
-const CACHE_VERSION = 'v4'
+const CACHE_VERSION = 'v5'
 
 /** Call once on app startup to evict caches from old schema versions. */
 export async function clearStaleCache(): Promise<void> {

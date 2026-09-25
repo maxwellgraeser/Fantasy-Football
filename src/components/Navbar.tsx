@@ -4,6 +4,7 @@ import { useValueScores } from '@/hooks/useValueScores'
 import { positionBadgeClass } from '@/lib/positions'
 
 const tabs = [
+  { path: '/leagues', label: 'My Leagues' },
   { path: '/players', label: 'Players' },
   { path: '/trending', label: 'Trending' },
   { path: '/rookies', label: 'Rookies' },
